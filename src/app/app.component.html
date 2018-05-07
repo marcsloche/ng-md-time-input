@@ -1,0 +1,6 @@
+<mat-form-field>
+  <ng-md-time-input [(ngModel)]="testTime" placeholder="Test" minutesSeparator=""></ng-md-time-input>
+</mat-form-field>
+
+<pre>Formatted: {{testTime ? testTime.format('L HH:mm') : 'null' }}</pre>
+<pre>{{testTime | json}}</pre>

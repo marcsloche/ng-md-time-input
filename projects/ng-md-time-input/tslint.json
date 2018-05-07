@@ -1,0 +1,16 @@
+{
+    "extends": "../../tslint.json",
+    "rules": {
+        "directive-selector": [
+            true,
+            "attribute",
+            "ng-md",
+        ],
+        "component-selector": [
+            true,
+            "element",
+            "ng-md",
+            "kebab-case"
+        ]
+    }
+}
