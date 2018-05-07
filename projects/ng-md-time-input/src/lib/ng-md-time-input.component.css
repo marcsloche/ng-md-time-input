@@ -1,0 +1,31 @@
+div {
+  display: flex;
+}
+
+input {
+  border: none;
+  background: none;
+  padding: 0;
+  outline: none;
+  font: inherit;
+  text-align: right;
+  width: 0.7em;
+}
+
+input:not(:first-child) {
+  margin-left: -2px;
+}
+
+/* Fading animation of separators when control is focused. */
+span, input {
+  opacity: 0;
+  transition: opacity 200ms;
+}
+
+:host.floating span, :host.floating input {
+  opacity: 1;
+}
+
+.dimmed {
+  color: grey;
+}
