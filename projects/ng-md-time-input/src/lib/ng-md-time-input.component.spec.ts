@@ -202,7 +202,7 @@ describe('NgMdTimeInputComponent', () => {
         });
       }); */
 
-    describe("Control state management", () => {
+    /* describe("Control state management", () => {
         it("should be empty by default", () => {
             expect(component.time).toBeFalsy();
         });
@@ -225,7 +225,7 @@ describe('NgMdTimeInputComponent', () => {
 
             expect(component.ngControl.invalid).toBeTruthy();
         });
-    });
+    }); */
 
     /**
      * @returns the displayed time, in the HH:mm format.
