@@ -20,18 +20,18 @@ import {
     NG_VALUE_ACCESSOR,
     NgControl,
     Validators,
-    AbstractControl
+    AbstractControl,
+    Validator,
+    ValidatorFn
 } from "@angular/forms";
 import { MatFormFieldControl } from "@angular/material";
 import { FocusMonitor, FocusOrigin } from "@angular/cdk/a11y";
 import { coerceBooleanProperty } from "@angular/cdk/coercion";
-import { Subject } from "rxjs";
+import { Subject, Subscription } from "rxjs";
 // Moment
-import { Moment } from "moment";
-import moment from "moment";
+import { Duration, duration, isDuration } from "moment";
 // Others
 import { TimeFactoryService } from './time-factory.service';
-import { TransparentFormControlState } from './transparent-form-control-state/transparent-form-control-state';
 
 
 @Component({
@@ -43,15 +43,13 @@ import { TransparentFormControlState } from './transparent-form-control-state/tr
     ],
     changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldControl<Moment>, ControlValueAccessor {
+export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldControl<Duration>, ControlValueAccessor {
     static nextId = 0;
     // Inputs and Outputs
     @Input() hoursSeparator = ":";
     @Input() minutesSeparator = "";
-    @Input() isUTC = true;
     // Time management
-    time: Moment;
-    private _dateToUseAsBaseline: Moment; // The date to which we want the time to return when the time goes from a null value to a time.
+    time: Duration;
     private readonly MINUTES_UNIT_INCREMENT_STEP = 1;
     private readonly MINUTES_DECIMAL_INCREMENT_STEP = 10;
     private readonly HOURS_UNIT_INCREMENT_STEP = 60;
@@ -59,12 +57,13 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
     private readonly NUMBER_OF_MINUTES_IN_DAY = 1440;
     // Form element management
     private _preventFocusLoss = false;
-    private controlStateManager: TransparentFormControlState;
+    private subscriptions: Subscription[] = [];
     stateChanges = new Subject<void>();
     @ViewChild("minutesUnit") minutesUnit: ElementRef;
     @ViewChild("minutesDecimal") minutesDecimal: ElementRef;
     @ViewChild("hoursUnit") hoursUnit: ElementRef;
     @ViewChild("hoursDecimal") hoursDecimal: ElementRef;
+    @ViewChild("hoursHundreds") hoursHundreds: ElementRef;
     //////////////////////////////////////////////////////////////////
     // For Mat Form Field
     // Used by Angular Material to map hints and errors to the control.
@@ -77,7 +76,7 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
     focused = false;
     private _required = false;
     private _disabled = false;
-    errorState = false; // For now, we are not handling errors yet.
+    errorState = false; // By default the input is valid.
     controlType = "time-input"; // Class identifier for this control will be mat-form-field-time-input.
 
     // NgModel
@@ -94,20 +93,24 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
         // Form initialization. On top of a directive that prevents the input of non
         // numerical char, we add a pattern to assure that only numbers are allowed.
         this.parts = fb.group({
+            daysUnit: ["", Validators.pattern(/[0-9]/)],
             hoursUnit: ["", Validators.pattern(/[0-9]/)],
             hoursDecimal: ["", Validators.pattern(/[0-9]/)],
             minutesDecimal: ["", Validators.pattern(/[0-9]/)],
-            minutesUnit: ["", Validators.compose([Validators.pattern(/[0-9]/), Validators.required])]
+            minutesUnit: ["", this.getMinutesUnitValidator()]
         });
 
+        // Subscribing to the form's status change in order to sync up the state of the NgControl with
+        // the one of the form.
+        this.subscriptions.push(
+            this.parts.statusChanges.subscribe(() => this.handleFormStatusChange())
+        );
+
+        // Monitoring the focus in the time input.
         fm.monitor(elRef.nativeElement, true).subscribe(origin => this.handleFocusChange(origin));
 
         if (this.ngControl != null) {
             this.ngControl.valueAccessor = this;
-            // Initializing the NgControl state manager.
-            this.controlStateManager = new TransparentFormControlState();
-            this.controlStateManager.register(this.parts, this.ngControl);
-            setTimeout(() => this.parts.get('minutesUnit').setErrors({ invalid: 'invalid' }), 2000);
         }
     }
 
@@ -117,23 +120,18 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
         // Cleaning up resources.
         this.stateChanges.complete();
         this.fm.stopMonitoring(this.elRef.nativeElement);
-        // The control state manager won't be initialized if no NgModel is used with this time input.
-        if(this.controlStateManager) {
-            this.controlStateManager.freeResources();
-        }
     }
 
     // This is where the NgModel with update our time.
     @Input()
-    get value(): Moment | null {
+    get value(): Duration | null {
         return this.time;
     }
-    set value(time: Moment | null) {
-        if (time && time.isValid()) {
+    set value(time: Duration | null) {
+        if (time && isDuration(time)) {
             this.time = time.clone();
-            this._dateToUseAsBaseline = this.timeFactoryService.resetTime(this.time, this.isUTC);
-            this.displayedHours = this.time.format("HH");
-            this.displayedMinutes = this.time.format("mm");
+            this.displayedHours = Math.floor(this.time.asHours()).toString();
+            this.displayedMinutes = this.time.minutes().toString();
         } else {
             this.time = null;
             this.displayedHours = "";
@@ -159,7 +157,7 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
         this.parts.get('hoursUnit').setValue(hours.charAt(hours.length - 1));
     }
     get displayedHours(): string {
-        return this.parts.get('hoursDecimal').value + this.parts.get('hoursUnit').value;
+        return this.parts.get('hoursHundreds').value + this.parts.get('hoursDecimal').value + this.parts.get('hoursUnit').value;
     }
 
     /**
@@ -205,21 +203,17 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
      */
     setTimeFromString(hoursString: string, minutesString: string): void {
         // First of, we parse the strings to number in order to validate if they are numbers.
-        const hours = parseInt(hoursString, 10);
-        const minutes = parseInt(minutesString, 10);
+        let hours = parseInt(hoursString, 10);
+        let minutes = parseInt(minutesString, 10);
 
         // The strings can be NaN if they are empty, null, undefined or contain a letter.
         if (Number.isNaN(hours) && Number.isNaN(minutes)) {
             this.time = null;
         }
         else {
-            // If there is a date to use as baseline, take it. Otherwise, set it to today.
-            this.time = this.timeFactoryService.resetTime(this._dateToUseAsBaseline, this.isUTC);
-            this.time.hours(Number.isNaN(hours) ? 0 : hours);
-            this.time.minutes(Number.isNaN(minutes) ? 0 : minutes);
-            // If there was more than 24 hours, prevent the date from changing. It does
-            // not affect the time portion of the date.
-            this.setDateBackToBaselined();
+            hours = Number.isNaN(hours) ? 0 : hours;
+            minutes = Number.isNaN(minutes) ? 0 : minutes;
+            this.time = duration(hours * 60 + minutes, "minutes");
         }
 
         this.emitChanges();
@@ -231,7 +225,7 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
      *
      */
     private formatDislayedTime() {
-        if (!this.time || !this.time.isValid()) {
+        if (!this.time || !isDuration(this.time)) {
             this.displayedHours = "";
             this.displayedMinutes = "";
         }
@@ -283,6 +277,15 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
         this._preventFocusLoss = false;
 
         this.stateChanges.next();
+    }
+
+    private handleFormStatusChange() {
+        if( !this.parts.invalid && this.errorState) {
+            this.errorState = false;
+        }
+        else if( this.parts.invalid && !this.errorState) {
+            this.errorState = true;
+        }
     }
 
     /**
@@ -337,25 +340,12 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
      */
     incrementTime(incrementStep: number) {
         if (!this.time) {
-            this.time = this.timeFactoryService.resetTime(this._dateToUseAsBaseline, this.isUTC);
+            this.time = duration();
         }
 
         this.time.add(incrementStep, 'minutes');
-        // Setting the day back to the wanted day.
-        this.setDateBackToBaselined();
         // Once the ngModel is updated, update the displayed time.
         this.formatDislayedTime();
-    }
-
-    private setDateBackToBaselined() {
-        if (this._dateToUseAsBaseline && this.time.format("L") !== this._dateToUseAsBaseline.format("L")) {
-            // Setting the day back to the wanted day.
-            this.time.set({
-                year: this._dateToUseAsBaseline.year(),
-                month: this._dateToUseAsBaseline.month(),
-                date: this._dateToUseAsBaseline.date()
-            });
-        }
     }
 
     /**
@@ -409,6 +399,17 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
 
 
     ////////////////////////////////////////////////////////////////////////////
+    // Validators
+    private getMinutesUnitValidator(): ValidatorFn {
+        const validators: ValidatorFn[] = [Validators.pattern(/[0-9]/)];
+
+        if(this.required) {
+            validators.push(Validators.required);
+        }
+
+        return Validators.compose(validators);
+    }
+    ////////////////////////////////////////////////////////////////////////////
     // Mat Form Field support
     @Input()
     get placeholder() {
@@ -437,6 +438,10 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
     }
     set required(req) {
         this._required = coerceBooleanProperty(req);
+        // Updating the required status of the inputs.
+        this.parts.get("minutesUnit").setValidators(this.getMinutesUnitValidator());
+        this.parts.get("minutesUnit").updateValueAndValidity(); // To trigger the new validators.
+
         this.stateChanges.next();
     }
 
@@ -468,7 +473,7 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
     }
 
     // ----------For the ngModel two way binding -------------------------------//
-    writeValue(value: Moment) {
+    writeValue(value: Duration | null) {
         this.value = value;
     }
 
