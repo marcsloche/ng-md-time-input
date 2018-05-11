@@ -4,14 +4,18 @@ import { By } from '@angular/platform-browser';
 
 import { NgMdTimeInputComponent } from './ng-md-time-input.component';
 import { NgMdTimeInputModule } from './ng-md-time-input.module';
-import { utc } from 'moment';
+import { duration, Duration } from 'moment';
 
 describe('NgMdTimeInputComponent', () => {
+    const DAYS_DECIMAL_INPUT_NAME = "daysDecimal";
+    const DAYS_UNIT_INPUT_NAME = "daysUnit";
     const HOURS_DECIMAL_INPUT_NAME = "hoursDecimal";
     const HOURS_UNIT_INPUT_NAME = "hoursUnit";
     const MINUTES_DECIMAL_INPUT_NAME = "minutesDecimal";
     const MINUTES_UNIT_INPUT_NAME = "minutesUnit";
     // The ids are the same but I created other variables for them in order to maintain the tests more easily.
+    const DAYS_DECIMAL_INPUT_ID = "daysDecimal";
+    const DAYS_UNIT_INPUT_ID = "daysUnit";
     const HOURS_DECIMAL_INPUT_ID = "hoursDecimal";
     const HOURS_UNIT_INPUT_ID = "hoursUnit";
     const MINUTES_DECIMAL_INPUT_ID = "minutesDecimal";
@@ -39,37 +43,39 @@ describe('NgMdTimeInputComponent', () => {
         expect(component).toBeTruthy();
     });
 
-    it('should display current date when set to the current date via NgModel', () => {
-        const currentTime = utc();
+    it('should display duration of 0 seconds when set to it via NgModel', () => {
+        const currentTime = duration();
+        const formattedCurrentTime = formatDuration(currentTime);
         // Setting up the time via the NgModel entry point in the component.
         component.writeValue(currentTime);
         fixture.detectChanges();
         const displayedTime = getDisplayedTime();
-        expect(displayedTime).toEqual(currentTime.format(DISPLAYED_TIME_FORMAT));
+        expect(displayedTime).toEqual(formattedCurrentTime);
     });
 
     it('should display the given time when it is not the current time', () => {
-        const currentTime = utc("23:59", "HH:mm");
+        const currentTime = duration(24, "hours");
+        const formattedCurrentTime = formatDuration(currentTime);
         // Setting up the time via the NgModel entry point in the component.
         component.writeValue(currentTime);
         fixture.detectChanges();
         const displayedTime = getDisplayedTime();
-        expect(displayedTime).toEqual(currentTime.format(DISPLAYED_TIME_FORMAT));
+        expect(displayedTime).toEqual(formattedCurrentTime);
     });
 
     it('should contain the given time', () => {
-        const currentTime = utc("23:59", "HH:mm");
+        const currentTime = duration(24, "hours");
         // Setting up the time via the NgModel entry point in the component.
         component.writeValue(currentTime);
         fixture.detectChanges();
         const timeInComponent = component.time;
-        expect(currentTime.isSame(timeInComponent)).toBeTruthy();
+        expect(currentTime.asMinutes()).toEqual(timeInComponent.asMinutes());
     });
 
     describe('Keyboard events', () => {
-        it('should increment minutes unit by 1 but should not change date', () => {
-            const currentTime = utc("23:59", "HH:mm");
-            const expectedTime = currentTime.clone().add(1, "minute").subtract(1, 'day'); // Set time back to 00:00 the current day.
+        it('should increment minutes unit by 1', () => {
+            const currentTime = duration({ days: 0, hours: 23, minutes: 59 });
+            const expectedTime = duration({ days: 1, hours: 0, minutes: 0 });
             // Setting up the time via the NgModel entry point in the component.
             component.writeValue(currentTime);
             fixture.detectChanges();
@@ -79,12 +85,12 @@ describe('NgMdTimeInputComponent', () => {
             });
             getInput(MINUTES_UNIT_INPUT_ID).dispatchEvent(event);
 
-            expect(expectedTime.isSame(component.time)).toBeTruthy("Time in component was not incremented properly. Value: " + component.time.format("L HH:mm") + ", Expected: " + expectedTime.format("L HH:mm"));
+            expect(expectedTime.asMinutes()).toEqual(component.time.asMinutes());
         });
 
-        it('should decrement minutes unit by 1 but should not change date', () => {
-            const currentTime = utc("00:00", "HH:mm");
-            const expectedTime = currentTime.clone().subtract(1, "minute").add(1, 'day'); // Set time back to 23:59 the current day.
+        it('should decrement minutes unit by 1.', () => {
+            const currentTime = duration({ days: 1, hours: 0, minutes: 0 });
+            const expectedTime = duration({ days: 0, hours: 23, minutes: 59 });
             // Setting up the time via the NgModel entry point in the component.
             component.writeValue(currentTime);
             fixture.detectChanges();
@@ -94,12 +100,12 @@ describe('NgMdTimeInputComponent', () => {
             });
             getInput(MINUTES_UNIT_INPUT_ID).dispatchEvent(event);
 
-            expect(expectedTime.isSame(component.time)).toBeTruthy("Time in component was not decremented properly. Value: " + component.time.format("L HH:mm") + ", Expected: " + expectedTime.format("L HH:mm"));
+            expect(expectedTime.asMinutes()).toEqual(component.time.asMinutes());
         });
 
-        it('should increment minutes decimal by 1 but should not change date', () => {
-            const currentTime = utc("23:59", "HH:mm");
-            const expectedTime = currentTime.clone().add(10, "minute").subtract(1, 'day'); // Set time back to 00:09 the current day.
+        it('should increment minutes decimal by 1.', () => {
+            const currentTime = duration({ days: 0, hours: 23, minutes: 59 });
+            const expectedTime = duration({ days: 1, hours: 0, minutes: 9 });
             // Setting up the time via the NgModel entry point in the component.
             component.writeValue(currentTime);
             fixture.detectChanges();
@@ -109,12 +115,12 @@ describe('NgMdTimeInputComponent', () => {
             });
             getInput(MINUTES_DECIMAL_INPUT_ID).dispatchEvent(event);
 
-            expect(expectedTime.isSame(component.time)).toBeTruthy("Time in component was not incremented properly. Value: " + component.time.format("L HH:mm") + ", Expected: " + expectedTime.format("L HH:mm"));
+            expect(expectedTime.asMinutes()).toEqual(component.time.asMinutes());
         });
 
-        it('should decrement minutes decimal by 1 but should not change date', () => {
-            const currentTime = utc("00:00", "HH:mm");
-            const expectedTime = currentTime.clone().subtract(10, "minute").add(1, 'day'); // Set time back to 23:50 the current day.
+        it('should decrement minutes decimal by 1', () => {
+            const currentTime = duration({ days: 1, hours: 0, minutes: 0 });
+            const expectedTime = duration({ days: 0, hours: 23, minutes: 50 });
             // Setting up the time via the NgModel entry point in the component.
             component.writeValue(currentTime);
             fixture.detectChanges();
@@ -124,12 +130,12 @@ describe('NgMdTimeInputComponent', () => {
             });
             getInput(MINUTES_DECIMAL_INPUT_ID).dispatchEvent(event);
 
-            expect(expectedTime.isSame(component.time)).toBeTruthy("Time in component was not decremented properly. Value: " + component.time.format("L HH:mm") + ", Expected: " + expectedTime.format("L HH:mm"));
+            expect(expectedTime.asMinutes()).toEqual(component.time.asMinutes());
         });
 
-        it('should increment hours unit by 1 but should not change date', () => {
-            const currentTime = utc("23:59", "HH:mm");
-            const expectedTime = currentTime.clone().add(1, "hour").subtract(1, 'day'); // Set time back to 00:59 the current day.
+        it('should increment hours unit by 1', () => {
+            const currentTime = duration({ days: 0, hours: 23, minutes: 59 });
+            const expectedTime = duration({ days: 1, hours: 0, minutes: 59 });
             // Setting up the time via the NgModel entry point in the component.
             component.writeValue(currentTime);
             fixture.detectChanges();
@@ -139,12 +145,12 @@ describe('NgMdTimeInputComponent', () => {
             });
             getInput(HOURS_UNIT_INPUT_ID).dispatchEvent(event);
 
-            expect(expectedTime.isSame(component.time)).toBeTruthy("Time in component was not incremented properly. Value: " + component.time.format("L HH:mm") + ", Expected: " + expectedTime.format("L HH:mm"));
+            expect(expectedTime.asMinutes()).toEqual(component.time.asMinutes());
         });
 
-        it('should decrement hours unit by 1 but should not change date', () => {
-            const currentTime = utc("00:00", "HH:mm");
-            const expectedTime = currentTime.clone().subtract(1, "hour").add(1, 'day'); // Set time back to 23:00 the current day.
+        it('should decrement hours unit by 1', () => {
+            const currentTime = duration({ days: 1, hours: 0, minutes: 0 });
+            const expectedTime = duration({ days: 0, hours: 23, minutes: 0 });
             // Setting up the time via the NgModel entry point in the component.
             component.writeValue(currentTime);
             fixture.detectChanges();
@@ -154,12 +160,12 @@ describe('NgMdTimeInputComponent', () => {
             });
             getInput(HOURS_UNIT_INPUT_ID).dispatchEvent(event);
 
-            expect(expectedTime.isSame(component.time)).toBeTruthy("Time in component was not decremented properly. Value: " + component.time.format("L HH:mm") + ", Expected: " + expectedTime.format("L HH:mm"));
+            expect(expectedTime.asMinutes()).toEqual(component.time.asMinutes());
         });
 
-        it('should add 10 hours when the user increments the hours decimal field but should not change date', () => {
-            const currentTime = utc("23:59", "HH:mm");
-            const expectedTime = currentTime.clone().add(10, "hour").subtract(1, 'day'); // Set time back to 09:59 the current day.
+        it('should increment the hours decimal field without impacting other fields', () => {
+            const currentTime = duration({ days: 0, hours: 23, minutes: 59 });
+            const expectedTime = duration({ days: 1, hours: 3, minutes: 59 });
             // Setting up the time via the NgModel entry point in the component.
             component.writeValue(currentTime);
             fixture.detectChanges();
@@ -169,12 +175,12 @@ describe('NgMdTimeInputComponent', () => {
             });
             getInput(HOURS_DECIMAL_INPUT_ID).dispatchEvent(event);
 
-            expect(expectedTime.isSame(component.time)).toBeTruthy("Time in component was not incremented properly. Value: " + component.time.format("L HH:mm") + ", Expected: " + expectedTime.format("L HH:mm"));
+            expect(expectedTime.asMinutes()).toEqual(component.time.asMinutes());
         });
 
-        it('should substract 10 hours when the user decrements the hours decimal field but should not change date', () => {
-            const currentTime = utc("00:00", "HH:mm");
-            const expectedTime = currentTime.clone().subtract(10, "hour").add(1, 'day'); // Set time back to 14:00 the current day.
+        it('should decrement the hours decimal field without impacting other fields', () => {
+            const currentTime =  duration({ days: 1, hours: 0, minutes: 0 });
+            const expectedTime =  duration({ days: 0, hours: 20, minutes: 0 });
             // Setting up the time via the NgModel entry point in the component.
             component.writeValue(currentTime);
             fixture.detectChanges();
@@ -184,7 +190,7 @@ describe('NgMdTimeInputComponent', () => {
             });
             getInput(HOURS_DECIMAL_INPUT_ID).dispatchEvent(event);
 
-            expect(expectedTime.isSame(component.time)).toBeTruthy("Time in component was not decremented properly. Value: " + component.time.format("L HH:mm") + ", Expected: " + expectedTime.format("L HH:mm"));
+            expect(expectedTime.asMinutes()).toEqual(component.time.asMinutes());
         });
     });
 
@@ -202,20 +208,21 @@ describe('NgMdTimeInputComponent', () => {
         });
       }); */
 
-    /* describe("Control state management", () => {
+    describe("Control state management", () => {
         it("should be empty by default", () => {
             expect(component.time).toBeFalsy();
         });
 
         it("should be valid when empty and not required", () => {
-            expect(component.ngControl.valid).toBeTruthy();
+            expect(component.errorState).toBeFalsy();
         });
 
         it("should be invalid when empty and required", () => {
             component.required = true;
+            component.time = null;
             fixture.detectChanges();
 
-            expect(component.ngControl.invalid).toBeTruthy();
+            expect(component.errorState).toBeTruthy();
         });
 
         it("should be set to invalid when its content is invalid", () => {
@@ -223,20 +230,40 @@ describe('NgMdTimeInputComponent', () => {
             component.parts.get(MINUTES_UNIT_INPUT_NAME).setErrors({ invalid: 'invalid' });
             fixture.detectChanges();
 
-            expect(component.ngControl.invalid).toBeTruthy();
+            expect(component.errorState).toBeTruthy();
         });
-    }); */
+    });
 
     /**
      * @returns the displayed time, in the HH:mm format.
      */
     function getDisplayedTime(): string {
+        const daysDecimal = component.parts.get(DAYS_DECIMAL_INPUT_NAME).value;
+        const daysUnit = component.parts.get(DAYS_UNIT_INPUT_NAME).value;
         const hoursDecimal = component.parts.get(HOURS_DECIMAL_INPUT_NAME).value;
         const hoursUnit = component.parts.get(HOURS_UNIT_INPUT_NAME).value;
         const minutesDecimal = component.parts.get(MINUTES_DECIMAL_INPUT_NAME).value;
         const minutesUnit = component.parts.get(MINUTES_UNIT_INPUT_NAME).value;
 
-        return `${hoursDecimal}${hoursUnit}:${minutesDecimal}${minutesUnit}`;
+        return `${daysDecimal}${daysUnit}d${hoursDecimal}${hoursUnit}:${minutesDecimal}${minutesUnit}`;
+    }
+
+    function formatDuration(duration: Duration) {
+        let days = Math.floor(duration.asDays()).toString();
+        let hours = duration.hours().toString();
+        let minutes = duration.minutes().toString();
+        // Adding up the 00:00 padding in order to have the same format as the displayed time.
+        if (days.length < 2) {
+            days = "0" + days;
+        }
+        if (hours.length < 2) {
+            hours = "0" + hours;
+        }
+        if (minutes.length < 2) {
+            minutes = "0" + minutes;
+        }
+
+        return days + "d" + hours + ":" + minutes;
     }
 
     function getInput(inputId: string): HTMLElement {

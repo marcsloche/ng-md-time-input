@@ -1,9 +1,16 @@
 <form [formGroup]="parts" (mousedown)="keepFocus()">
+    <input id="daysDecimal" formControlName="daysDecimal" placeholder="0" (input)="updateTime()" (keydown)="handleKeydown($event, 'daysDecimal')"
+        #daysDecimal ng-md-only-number>
+    <input id="daysUnit" formControlName="daysUnit" placeholder="0" (input)="updateTime()" (keydown)="handleKeydown($event, 'daysUnit')"
+        #daysUnit ng-md-only-number>
+    <span class="separator" [ngClass]="{dimmed:displayedDays===''}" (mousedown)="keepFocus()">{{daysSeparator}}</span>
+
     <input id="hoursDecimal" formControlName="hoursDecimal" placeholder="0" (input)="updateTime()" (keydown)="handleKeydown($event, 'hoursDecimal')"
         #hoursDecimal ng-md-only-number>
     <input id="hoursUnit" formControlName="hoursUnit" placeholder="0" (input)="updateTime()" (keydown)="handleKeydown($event, 'hoursUnit')"
         #hoursUnit ng-md-only-number>
     <span class="separator" [ngClass]="{dimmed:displayedHours===''}" (mousedown)="keepFocus()">{{hoursSeparator}}</span>
+
     <input id="minutesDecimal" formControlName="minutesDecimal" placeholder="0" (input)="updateTime()" (keydown)="handleKeydown($event, 'minutesDecimal')"
         #minutesDecimal ng-md-only-number>
     <input id="minutesUnit" formControlName="minutesUnit" placeholder="0" (input)="updateTime()" (keydown)="handleKeydown($event, 'minutesUnit')"
