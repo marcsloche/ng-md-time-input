@@ -1,8 +1,13 @@
 <mat-form-field>
-  <ng-md-time-input [(ngModel)]="testTime" placeholder="Test" minutesSeparator="" [required]="true"></ng-md-time-input>
+    <ng-md-time-input [(ngModel)]="testTime" placeholder="Test" minutesSeparator="" (change)="testChange($event)" (input)="testInput($event)"
+        [required]="true"></ng-md-time-input>
 </mat-form-field>
 
 <div *ngIf="testTime">
     <pre>{{getTime()}}</pre>
 </div>
 
+
+<mat-form-field>
+    <input [(ngModel)]="testValue" placeholder="Test" (change)="testChange($event)" (input)="testInput($event)" matInput>
+</mat-form-field>

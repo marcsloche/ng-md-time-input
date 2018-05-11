@@ -68,6 +68,9 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
     @ViewChild("hoursDecimal") hoursDecimal: ElementRef;
     @ViewChild("daysUnit") daysUnit: ElementRef;
     @ViewChild("daysDecimal") daysDecimal: ElementRef;
+    // For the change event
+    private previousDuration: Duration = null;
+    private shouldManuallyTriggerChangeEvent: boolean;
     //////////////////////////////////////////////////////////////////
     // For Mat Form Field
     // Used by Angular Material to map hints and errors to the control.
@@ -119,13 +122,17 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
         }
     }
 
-    ngOnInit() { }
+    ngOnInit() {
+        this.elRef.nativeElement.addEventListener("change", () => {
+            this.shouldManuallyTriggerChangeEvent = false;
+        });
+    }
 
     ngOnDestroy() {
         // Cleaning up resources.
         this.stateChanges.complete();
         this.fm.stopMonitoring(this.elRef.nativeElement);
-        for(const sub of this.subscriptions) {
+        for (const sub of this.subscriptions) {
             sub.unsubscribe();
         }
     }
@@ -145,6 +152,7 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
         this.formatDislayedTime();
 
         this.emitChanges();
+        this.shouldManuallyTriggerChangeEvent = false;
     }
 
     /**
@@ -309,6 +317,12 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
             if (this.ngControl) {
                 this.ngControl.control.markAsTouched();
             }
+            // By default, the change event is only triggered when the user types in a new value.
+            // In our case, we want to trigger it when the user increments/decrements the value too.
+            if (this.shouldManuallyTriggerChangeEvent) {
+                const changeEvent = new Event('change');
+                this.elRef.nativeElement.dispatchEvent(changeEvent);
+            }
         }
         // The focus loss prevention is only applied once. After that, return to normal focus management.
         this._preventFocusLoss = false;
@@ -336,7 +350,7 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
             const incrementStep = this.getIncrementStep(targettedInputName);
             this.incrementTime(incrementStep);
             event.preventDefault(); // Prevents the carret from moving to the lefthand of the input
-            event.stopPropagation(); // prevents the carret from moving
+            // event.stopPropagation(); // prevents the carret from moving
             return;
         }
         // On down arrow, we want to decrement the targetted input
@@ -344,7 +358,7 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
             const decrementStep = this.getDecrementStep(targettedInputName);
             this.incrementTime(decrementStep);
             event.preventDefault(); // Prevents the carret from moving to the righthand of the input
-            event.stopPropagation(); // prevents the carret from moving
+            // event.stopPropagation(); // prevents the carret from moving
             return;
         }
         // On left arrow, we want to move the carret to the left sibling of the targetted input
@@ -391,6 +405,9 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
         // Once the ngModel is updated, update the displayed time.
         this.formatDislayedTime();
         this.emitChanges();
+        // Since the inputs are not recognizing the increment as an input event, we got to manually trigger one.
+        const inputEvent = new Event('input');
+        this.elRef.nativeElement.dispatchEvent(inputEvent);
     }
 
     /**
@@ -427,8 +444,8 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
         // The hours are on a base 24, which means that we have to adjust the increment step
         // so that the increment does not change the hours unit. (Ex: We increment the hours decimal of 0d 15:00,
         // we don't want it to display as 1d 01:00, but we want it as 1d 05:00).
-        if(currentNumberOfMinutesInTime + this.NUMBER_OF_MINUTES_IN_TEN_HOURS > this.NUMBER_OF_MINUTES_IN_DAY) {
-            incrementStep = ( (24 - this.time.hours()) + this.time.hours() % 10 ) * this.NUMBER_OF_MINUTES_IN_HOUR;
+        if (currentNumberOfMinutesInTime + this.NUMBER_OF_MINUTES_IN_TEN_HOURS > this.NUMBER_OF_MINUTES_IN_DAY) {
+            incrementStep = ((24 - this.time.hours()) + this.time.hours() % 10) * this.NUMBER_OF_MINUTES_IN_HOUR;
         }
 
         return incrementStep;
@@ -441,8 +458,8 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
         // The hours are on a base 24, which means that we have to adjust the decrement step
         // so that the decrement does not change the hours unit. (Ex: We decrement the hours decimal of 1d 09:00,
         // we don't want it to display as 0d 23:00, but we want it as 0d 19:00).
-        if(currentNumberOfMinutesInTime - this.NUMBER_OF_MINUTES_IN_TEN_HOURS < 0) {
-            decrementStep = ( this.time.hours() + ( 14 - this.time.hours()) % 10 ) * this.NUMBER_OF_MINUTES_IN_HOUR * -1;
+        if (currentNumberOfMinutesInTime - this.NUMBER_OF_MINUTES_IN_TEN_HOURS < 0) {
+            decrementStep = (this.time.hours() + (14 - this.time.hours()) % 10) * this.NUMBER_OF_MINUTES_IN_HOUR * -1;
         }
 
         return decrementStep;
@@ -560,8 +577,12 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
     }
 
     emitChanges() {
+        if(this.previousDuration !== this.value) {
+            this.shouldManuallyTriggerChangeEvent = true;
+        }
         this.stateChanges.next();
         this.propagateChange(this.value);
+        this.previousDuration = this.value;
     }
 
     // ----------For the ngModel two way binding -------------------------------//

@@ -12,12 +12,17 @@ export class AppComponent {
     title = 'app';
     required = false;
     public testTime = moment.duration();
+    testValue = "Hi!";
 
     constructor() {
+        setTimeout(() => this.testValue = "fdfasdd", 5000);
     }
 
     testChange(event) {
-        console.log(event);
+        console.log("Changed:", event);
+    }
+    testInput(event) {
+        console.log("Input:", event);
     }
 
     getTime(): string {

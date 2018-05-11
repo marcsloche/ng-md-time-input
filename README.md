@@ -1,27 +1,19 @@
 # NgMd
-
-This project was generated with [Angular CLI](https://github.com/angular/angular-cli) version 6.0.0.
+This project is an open-source duration input for Angular Material. Feel free to contribute to make this library even more awesome!
+This project runs on Angular and Angular Material 6.0.0. It is not compatible with older version of Angular.
 
 ## Development server
-
-Run `ng serve` for a dev server. Navigate to `http://localhost:4200/`. The app will automatically reload if you change any of the source files.
-
-## Code scaffolding
-
-Run `ng generate component component-name` to generate a new component. You can also use `ng generate directive|pipe|service|class|guard|interface|enum|module`.
+Everytime the ng-md-time-input library is changed, you must build the library first before testing it with ng serve. To do so, run `npm run build`.
+Run `ng serve` for a dev server. Navigate to `http://localhost:4200/`. The app will automatically reload if you change any of the source files. As mentionned, if anything in the `projects/ng-md-time-input` folder was changed, you must first build it in order to see the changes.
 
 ## Build
 
-Run `ng build` to build the project. The build artifacts will be stored in the `dist/` directory. Use the `--prod` flag for a production build.
+Run `npm run build` to run a development build of the ng-md-time-input library. The build artifacts will be stored in the `project/` directory. Use the `npm run build-prod` for a production build.
 
 ## Running unit tests
 
-Run `ng test` to execute the unit tests via [Karma](https://karma-runner.github.io).
-
-## Running end-to-end tests
-
-Run `ng e2e` to execute the end-to-end tests via [Protractor](http://www.protractortest.org/).
+Run `npm run test` to execute the unit tests via [Karma](https://karma-runner.github.io).
 
 ## Further help
 
-To get more help on the Angular CLI use `ng help` or go check out the [Angular CLI README](https://github.com/angular/angular-cli/blob/master/README.md).
+Feel free to contact me if you have any question :) 
