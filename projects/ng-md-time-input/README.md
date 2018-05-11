@@ -1,4 +1,4 @@
-# NgMd
+# NgMdTimeInput
 This project is an open-source duration input for Angular Material. Feel free to contribute to make this library even more awesome!
 This project runs on Angular and Angular Material 6.0.0. It is not compatible with older version of Angular.
 
@@ -18,4 +18,4 @@ Run `npm run test` to execute the unit tests via [Karma](https://karma-runner.gi
 
 ## Further help
 
-Feel free to contact me if you have any question :) 
+You can email me if you have any question: `mathieu.dumoulin@outlook.com` :) 
