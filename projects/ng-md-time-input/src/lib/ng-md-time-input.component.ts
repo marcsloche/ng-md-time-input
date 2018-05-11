@@ -49,6 +49,7 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
     @Input() daysSeparator = "d";
     @Input() hoursSeparator = ":";
     @Input() minutesSeparator = "";
+    @Input() showDays = true;
     // Time management
     time: Duration;
     private readonly MINUTES_UNIT_INCREMENT_STEP = 1;

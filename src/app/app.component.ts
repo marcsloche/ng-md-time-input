@@ -13,6 +13,7 @@ export class AppComponent {
     required = false;
     public testTime = moment.duration();
     testValue = "Hi!";
+    showDays = false;
 
     constructor() {
         setTimeout(() => this.testValue = "fdfasdd", 5000);
