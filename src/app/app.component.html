@@ -1,5 +1,5 @@
 <mat-form-field>
-    <ng-md-time-input [(ngModel)]="testTime" placeholder="Test" minutesSeparator="" (change)="testChange($event)" (input)="testInput($event)"
+    <ng-md-time-input [(ngModel)]="testTime" placeholder="Test" [showDays]="showDays" minutesSeparator="" (change)="testChange($event)" (input)="testInput($event)"
         [required]="true"></ng-md-time-input>
 </mat-form-field>
 
