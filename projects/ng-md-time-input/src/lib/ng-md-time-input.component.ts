@@ -46,15 +46,18 @@ import { TimeFactoryService } from './time-factory.service';
 export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldControl<Duration>, ControlValueAccessor {
     static nextId = 0;
     // Inputs and Outputs
+    @Input() daysSeparator = "d";
     @Input() hoursSeparator = ":";
     @Input() minutesSeparator = "";
     // Time management
     time: Duration;
     private readonly MINUTES_UNIT_INCREMENT_STEP = 1;
-    private readonly MINUTES_DECIMAL_INCREMENT_STEP = 10;
-    private readonly HOURS_UNIT_INCREMENT_STEP = 60;
-    private readonly HOURS_DECIMAL_INCREMENT_STEP = 600;
+    private readonly NUMBER_OF_MINUTES_IN_TEN_MINUTES = 10;
+    private readonly NUMBER_OF_MINUTES_IN_HOUR = 60;
+    private readonly NUMBER_OF_MINUTES_IN_TEN_HOURS = 600;
     private readonly NUMBER_OF_MINUTES_IN_DAY = 1440;
+    private readonly NUMBER_OF_MINUTES_IN_TEN_DAYS = 14400;
+    private readonly MAX_TIME_IN_MINUTES = 143999; // 99d 23:59
     // Form element management
     private _preventFocusLoss = false;
     private subscriptions: Subscription[] = [];
@@ -63,7 +66,8 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
     @ViewChild("minutesDecimal") minutesDecimal: ElementRef;
     @ViewChild("hoursUnit") hoursUnit: ElementRef;
     @ViewChild("hoursDecimal") hoursDecimal: ElementRef;
-    @ViewChild("hoursHundreds") hoursHundreds: ElementRef;
+    @ViewChild("daysUnit") daysUnit: ElementRef;
+    @ViewChild("daysDecimal") daysDecimal: ElementRef;
     //////////////////////////////////////////////////////////////////
     // For Mat Form Field
     // Used by Angular Material to map hints and errors to the control.
@@ -93,9 +97,10 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
         // Form initialization. On top of a directive that prevents the input of non
         // numerical char, we add a pattern to assure that only numbers are allowed.
         this.parts = fb.group({
+            daysDecimal: ["", Validators.pattern(/[0-9]/)],
             daysUnit: ["", Validators.pattern(/[0-9]/)],
-            hoursUnit: ["", Validators.pattern(/[0-9]/)],
             hoursDecimal: ["", Validators.pattern(/[0-9]/)],
+            hoursUnit: ["", Validators.pattern(/[0-9]/)],
             minutesDecimal: ["", Validators.pattern(/[0-9]/)],
             minutesUnit: ["", this.getMinutesUnitValidator()]
         });
@@ -120,6 +125,9 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
         // Cleaning up resources.
         this.stateChanges.complete();
         this.fm.stopMonitoring(this.elRef.nativeElement);
+        for(const sub of this.subscriptions) {
+            sub.unsubscribe();
+        }
     }
 
     // This is where the NgModel with update our time.
@@ -130,13 +138,11 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
     set value(time: Duration | null) {
         if (time && isDuration(time)) {
             this.time = time.clone();
-            this.displayedHours = Math.floor(this.time.asHours()).toString();
-            this.displayedMinutes = this.time.minutes().toString();
         } else {
             this.time = null;
-            this.displayedHours = "";
-            this.displayedMinutes = "";
         }
+        // Sets the time to display in the proper format.
+        this.formatDislayedTime();
 
         this.emitChanges();
     }
@@ -145,7 +151,19 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
      * Gets the string representation of the displayed time.
      */
     private getDisplayedTime(): string {
-        return this.displayedHours + this.displayedMinutes;
+        return this.displayedDays + this.displayedHours + this.displayedMinutes;
+    }
+
+    /**
+     * Sets the displayed days to the given value.
+     * Note: This affectation will not change the ngModel value.
+     */
+    set displayedDays(days: string) {
+        this.parts.get('daysDecimal').setValue(days.charAt(days.length - 2));
+        this.parts.get('daysUnit').setValue(days.charAt(days.length - 1));
+    }
+    get displayedDays(): string {
+        return this.parts.get('daysDecimal').value + this.parts.get('daysUnit').value;
     }
 
     /**
@@ -157,7 +175,7 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
         this.parts.get('hoursUnit').setValue(hours.charAt(hours.length - 1));
     }
     get displayedHours(): string {
-        return this.parts.get('hoursHundreds').value + this.parts.get('hoursDecimal').value + this.parts.get('hoursUnit').value;
+        return this.parts.get('hoursDecimal').value + this.parts.get('hoursUnit').value;
     }
 
     /**
@@ -180,7 +198,7 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
      */
     updateTime(): void {
         this.updateDisplayedTime();
-        this.setTimeFromString(this.displayedHours, this.displayedMinutes);
+        this.setTimeFromString(this.displayedDays, this.displayedHours, this.displayedMinutes);
     }
 
     /**
@@ -188,49 +206,68 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
      */
     updateDisplayedTime(): void {
         let displayedTime = this.getDisplayedTime();
-        displayedTime = displayedTime.slice(-4); // Take only the last four characters for our time.
+        displayedTime = displayedTime.slice(-6); // Take only the last 6 characters for our time. (The max is 6 digits)
 
         this.displayedMinutes = displayedTime.slice(-2); // Take only the last two characters.
-        this.displayedHours = displayedTime.slice(0, -2); // Take all characters but the last two.
+        this.displayedHours = displayedTime.slice(-4, -2); // Takes from the fourth character starting from the end to the second.
+        this.displayedDays = displayedTime.slice(0, -4); // Take all characters but the last four.
     }
 
     /**
      * Converts a time string into a proper time format. It also set the ngModel time to the converted value.
+     * @param daysString The days to set. The maximum day allowed is 99.
      * @param hoursString The hours to set. The hours will be converted to a 24 hours format. This means that
      *                    if the given hour is 25, the displayed hours will be 1.
      * @param minutesString The minutes to set. The minutes will be onverted to a 60 minutes format. This means
      *                      if the given minute 61, it will add an hour and set the minutes to 01.
      */
-    setTimeFromString(hoursString: string, minutesString: string): void {
+    setTimeFromString(daysString: string, hoursString: string, minutesString: string): void {
         // First of, we parse the strings to number in order to validate if they are numbers.
+        let days = parseInt(daysString, 10);
         let hours = parseInt(hoursString, 10);
         let minutes = parseInt(minutesString, 10);
 
         // The strings can be NaN if they are empty, null, undefined or contain a letter.
-        if (Number.isNaN(hours) && Number.isNaN(minutes)) {
+        if (Number.isNaN(days) && Number.isNaN(hours) && Number.isNaN(minutes)) {
             this.time = null;
         }
         else {
+            days = Number.isNaN(days) ? 0 : days;
             hours = Number.isNaN(hours) ? 0 : hours;
             minutes = Number.isNaN(minutes) ? 0 : minutes;
-            this.time = duration(hours * 60 + minutes, "minutes");
+            this.setTimeFromMinutes(days * this.NUMBER_OF_MINUTES_IN_DAY + hours * this.NUMBER_OF_MINUTES_IN_HOUR + minutes);
         }
 
         this.emitChanges();
     }
 
+    private setTimeFromMinutes(minutes: number) {
+        // If the time is greater than the max time, set it to the max time.
+        if (minutes > this.MAX_TIME_IN_MINUTES) {
+            this.time = duration(this.MAX_TIME_IN_MINUTES, 'minutes');
+        }
+        // Else, if the time is negative, set it to 0.
+        else if (minutes < 0) {
+            this.time = duration();
+        }
+        else {
+            this.time = duration(minutes, 'minutes');
+        }
+    }
+
     /**
-     * This function takes a the hours and minutes and parses it to a time format.
-     * Precisely, if the hours and minutes are 9999 (99 hours and 99 minutes), it will convert it to
-     *
+     * This function takes the time and formats it to a padded format.
+     * If the time is not a duration, it will set it to an empty string.
      */
     private formatDislayedTime() {
         if (!this.time || !isDuration(this.time)) {
+            this.displayedDays = "";
             this.displayedHours = "";
             this.displayedMinutes = "";
         }
         // Else, update the model with the written time.
         else {
+            this.displayedDays = this.padWithChar("0", Math.floor(this.time.asDays()).toString(), 2);
             this.displayedHours = this.padWithChar("0", this.time.hours().toString(), 2);
             this.displayedMinutes = this.padWithChar("0", this.time.minutes().toString(), 2);
         }
@@ -280,10 +317,10 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
     }
 
     private handleFormStatusChange() {
-        if( !this.parts.invalid && this.errorState) {
+        if (!this.parts.invalid && this.errorState) {
             this.errorState = false;
         }
-        else if( this.parts.invalid && !this.errorState) {
+        else if (this.parts.invalid && !this.errorState) {
             this.errorState = true;
         }
     }
@@ -298,13 +335,15 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
         if (event.key === 'ArrowUp') {
             const incrementStep = this.getIncrementStep(targettedInputName);
             this.incrementTime(incrementStep);
+            event.preventDefault(); // Prevents the carret from moving to the lefthand of the input
             event.stopPropagation(); // prevents the carret from moving
             return;
         }
         // On down arrow, we want to decrement the targetted input
         else if (event.key === 'ArrowDown') {
-            const incrementStep = this.getIncrementStep(targettedInputName);
-            this.incrementTime(incrementStep * -1);
+            const decrementStep = this.getDecrementStep(targettedInputName);
+            this.incrementTime(decrementStep);
+            event.preventDefault(); // Prevents the carret from moving to the righthand of the input
             event.stopPropagation(); // prevents the carret from moving
             return;
         }
@@ -316,8 +355,10 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
             if (leftSibling && leftSibling.nativeElement.value) {
                 this.keepFocus(); // Otherwise, the focus is lost momentarly
                 this.focusInput(leftSibling.nativeElement, "keyboard");
-                event.stopPropagation(); // prevents the carret from cancelling the new focus
             }
+            event.preventDefault(); // Prevents the carret from moving to the lefthand of the input
+            event.stopPropagation(); // prevents the carret from cancelling the new focus
+
             return;
         }
         // On right arrow, we want to move the carret to the right sibling of the targetted input
@@ -328,8 +369,10 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
             if (rightSibling && rightSibling.nativeElement.value) {
                 this.keepFocus(); // Otherwise, the focus is lost momentarly
                 this.focusInput(rightSibling.nativeElement, "keyboard");
-                event.stopPropagation(); // prevents the carret from cancelling the new focus
             }
+
+            event.preventDefault(); // Prevents the carret from moving to the righthand of the input
+            event.stopPropagation(); // prevents the carret from cancelling the new focus
             return;
         }
     }
@@ -343,9 +386,11 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
             this.time = duration();
         }
 
-        this.time.add(incrementStep, 'minutes');
+        this.setTimeFromMinutes(this.time.asMinutes() + incrementStep);
+
         // Once the ngModel is updated, update the displayed time.
         this.formatDislayedTime();
+        this.emitChanges();
     }
 
     /**
@@ -353,16 +398,61 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
      */
     private getIncrementStep(inputName: string): number {
         switch (inputName) {
-            case 'hoursDecimal': return this.HOURS_DECIMAL_INCREMENT_STEP;
-            case 'hoursUnit': return this.HOURS_UNIT_INCREMENT_STEP;
-            case 'minutesDecimal': return this.MINUTES_DECIMAL_INCREMENT_STEP;
+            case 'daysDecimal': return this.NUMBER_OF_MINUTES_IN_TEN_DAYS;
+            case 'daysUnit': return this.NUMBER_OF_MINUTES_IN_DAY;
+            case 'hoursDecimal': return this.getHoursDecimalIncrementStep();
+            case 'hoursUnit': return this.NUMBER_OF_MINUTES_IN_HOUR;
+            case 'minutesDecimal': return this.NUMBER_OF_MINUTES_IN_TEN_MINUTES;
             case 'minutesUnit': return this.MINUTES_UNIT_INCREMENT_STEP;
         }
+    }
+    /**
+     * @returns The proper decrement step, based on the given input name.
+     */
+    private getDecrementStep(inputName: string): number {
+        switch (inputName) {
+            case 'daysDecimal': return -1 * this.NUMBER_OF_MINUTES_IN_TEN_DAYS;
+            case 'daysUnit': return -1 * this.NUMBER_OF_MINUTES_IN_DAY;
+            case 'hoursDecimal': return this.getHoursDecimalDecrementStep();
+            case 'hoursUnit': return -1 * this.NUMBER_OF_MINUTES_IN_HOUR;
+            case 'minutesDecimal': return -1 * this.NUMBER_OF_MINUTES_IN_TEN_MINUTES;
+            case 'minutesUnit': return -1 * this.MINUTES_UNIT_INCREMENT_STEP;
+        }
+    }
+
+    private getHoursDecimalIncrementStep(): number {
+        const currentNumberOfMinutesInTime = this.time.hours() * 60 + this.time.minutes();
+        let incrementStep = this.NUMBER_OF_MINUTES_IN_TEN_HOURS;
+
+        // The hours are on a base 24, which means that we have to adjust the increment step
+        // so that the increment does not change the hours unit. (Ex: We increment the hours decimal of 0d 15:00,
+        // we don't want it to display as 1d 01:00, but we want it as 1d 05:00).
+        if(currentNumberOfMinutesInTime + this.NUMBER_OF_MINUTES_IN_TEN_HOURS > this.NUMBER_OF_MINUTES_IN_DAY) {
+            incrementStep = ( (24 - this.time.hours()) + this.time.hours() % 10 ) * this.NUMBER_OF_MINUTES_IN_HOUR;
+        }
+
+        return incrementStep;
+    }
+
+    private getHoursDecimalDecrementStep(): number {
+        const currentNumberOfMinutesInTime = this.time.hours() * 60 + this.time.minutes();
+        let decrementStep = this.NUMBER_OF_MINUTES_IN_TEN_HOURS * -1;
+
+        // The hours are on a base 24, which means that we have to adjust the decrement step
+        // so that the decrement does not change the hours unit. (Ex: We decrement the hours decimal of 1d 09:00,
+        // we don't want it to display as 0d 23:00, but we want it as 0d 19:00).
+        if(currentNumberOfMinutesInTime - this.NUMBER_OF_MINUTES_IN_TEN_HOURS < 0) {
+            decrementStep = ( this.time.hours() + ( 14 - this.time.hours()) % 10 ) * this.NUMBER_OF_MINUTES_IN_HOUR * -1;
+        }
+
+        return decrementStep;
     }
 
     private getLeftSiblingOfInput(inputName: string): ElementRef | null {
         switch (inputName) {
-            case 'hoursDecimal': return null;
+            case 'daysDecimal': return null;
+            case 'daysUnit': return this.daysDecimal;
+            case 'hoursDecimal': return this.daysUnit;
             case 'hoursUnit': return this.hoursDecimal;
             case 'minutesDecimal': return this.hoursUnit;
             case 'minutesUnit': return this.minutesDecimal;
@@ -370,6 +460,8 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
     }
     private getRightSiblingOfInput(inputName: string): ElementRef | null {
         switch (inputName) {
+            case 'daysDecimal': return this.daysUnit;
+            case 'daysUnit': return this.hoursDecimal;
             case 'hoursDecimal': return this.hoursUnit;
             case 'hoursUnit': return this.minutesDecimal;
             case 'minutesDecimal': return this.minutesUnit;
@@ -403,7 +495,7 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
     private getMinutesUnitValidator(): ValidatorFn {
         const validators: ValidatorFn[] = [Validators.pattern(/[0-9]/)];
 
-        if(this.required) {
+        if (this.required) {
             validators.push(Validators.required);
         }
 
@@ -422,7 +514,7 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
 
     // This functions tells the mat-form-field wheter it is empty or not.
     get empty() {
-        return !this.displayedHours && !this.displayedMinutes;
+        return !this.time || !isDuration(this.time);
     }
 
     // Used by Angular Material to display the label properly

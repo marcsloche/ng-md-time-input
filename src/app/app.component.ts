@@ -20,4 +20,12 @@ export class AppComponent {
         console.log(event);
     }
 
+    getTime(): string {
+        if (this.testTime) {
+            return Math.floor(this.testTime.asDays()) + "d" + this.testTime.hours() + ":" + this.testTime.minutes();
+        }
+
+        return "";
+    }
+
 }
