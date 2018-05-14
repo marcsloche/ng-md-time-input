@@ -14,9 +14,13 @@ export class AppComponent {
     public testTime = moment.duration();
     testValue = "Hi!";
     showDays = false;
+    disabled = false;
 
     constructor() {
-        setTimeout(() => this.testValue = "fdfasdd", 5000);
+        setTimeout(() =>  {
+            this.testValue = "fdfasdd";
+            this.disabled = true;
+        }, 5000);
     }
 
     testChange(event) {

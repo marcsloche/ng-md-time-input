@@ -562,6 +562,14 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
     }
     set disabled(dis) {
         this._disabled = coerceBooleanProperty(dis);
+
+        if(this._disabled) {
+            this.parts.disable();
+        }
+        else {
+            this.parts.enable();
+        }
+
         this.stateChanges.next();
     }
 

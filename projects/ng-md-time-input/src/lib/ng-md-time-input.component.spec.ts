@@ -232,6 +232,17 @@ describe('NgMdTimeInputComponent', () => {
 
             expect(component.errorState).toBeTruthy();
         });
+
+        it("should be not be editable when it is disabled", () => {
+            component.disabled = true;
+            fixture.detectChanges();
+
+            const childInputs = fixture.debugElement.queryAll(By.css("input"));
+
+            for(const child of childInputs) {
+                expect(child.nativeElement.disabled).toBeTruthy(child.attributes['formControlName'] + " is not disabled");
+            }
+        });
     });
 
     /**
