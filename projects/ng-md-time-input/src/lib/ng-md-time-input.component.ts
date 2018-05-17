@@ -513,11 +513,12 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
      */
     private newEvent(type: string) : Event {
         let changeEvent: Event;
+        // Try creating a new event that is compatible with modern browsers
         try {
              changeEvent = new Event(type);
         }
+        // If the browser does not support this way of creating an event (eg. IE11), do it the old way.
         catch(err) {
-            console.error(err);
             changeEvent = document.createEvent(type);
         }
 
