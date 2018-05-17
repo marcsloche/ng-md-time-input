@@ -349,7 +349,7 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
      */
     handleKeydown(event: KeyboardEvent, targettedInputName: string): void {
         // On up arrow, we want to increment the targetted input
-        if (event.key === 'ArrowUp') {
+        if (event.key === 'ArrowUp' || event.key === 'Up') {
             const incrementStep = this.getIncrementStep(targettedInputName);
             this.incrementTime(incrementStep);
             event.preventDefault(); // Prevents the carret from moving to the lefthand of the input
@@ -357,7 +357,7 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
             return;
         }
         // On down arrow, we want to decrement the targetted input
-        else if (event.key === 'ArrowDown') {
+        else if (event.key === 'ArrowDown' || event.key === 'Down') {
             const decrementStep = this.getDecrementStep(targettedInputName);
             this.incrementTime(decrementStep);
             event.preventDefault(); // Prevents the carret from moving to the righthand of the input
@@ -365,7 +365,7 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
             return;
         }
         // On left arrow, we want to move the carret to the left sibling of the targetted input
-        else if (event.key === 'ArrowLeft') {
+        else if (event.key === 'ArrowLeft' || event.key === 'Left') {
             const leftSibling = this.getLeftSiblingOfInput(targettedInputName);
             // The sibling can be null if the carret cannot go further to the left or
             // can be undefined if the ViewChild was not properly initialized.
@@ -379,7 +379,7 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
             return;
         }
         // On right arrow, we want to move the carret to the right sibling of the targetted input
-        else if (event.key === 'ArrowRight') {
+        else if (event.key === 'ArrowRight' || event.key === 'Right') {
             const rightSibling = this.getRightSiblingOfInput(targettedInputName);
             // The sibling can be null if the carret cannot go further to the right or
             // can be undefined if the ViewChild was not properly initialized.
@@ -521,7 +521,8 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
         }
         // If the browser does not support this way of creating an event (eg. IE11), do it the old way.
         catch (err) {
-            changeEvent = document.createEvent(type);
+            changeEvent = document.createEvent('HTMLEvents');
+            changeEvent.initEvent(type, true,  false);
         }
 
         return changeEvent;
