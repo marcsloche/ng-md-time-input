@@ -321,7 +321,7 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
             // By default, the change event is only triggered when the user types in a new value.
             // In our case, we want to trigger it when the user increments/decrements the value too.
             if (this.shouldManuallyTriggerChangeEvent) {
-                const changeEvent = new Event('change');
+                const changeEvent = this.newEvent('change');
                 this.elRef.nativeElement.dispatchEvent(changeEvent);
             }
         }
@@ -407,7 +407,7 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
         this.formatDislayedTime();
         this.emitChanges();
         // Since the inputs are not recognizing the increment as an input event, we got to manually trigger one.
-        const inputEvent = new Event('input');
+        const inputEvent = this.newEvent('input');
         this.elRef.nativeElement.dispatchEvent(inputEvent);
     }
 
@@ -505,6 +505,23 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
      */
     keepFocus() {
         this._preventFocusLoss = true;
+    }
+
+    /**
+     * This function is to create an event with modern browser or old browser
+     * @param type Type of event to create
+     */
+    private newEvent(type: string) : Event {
+        let changeEvent: Event;
+        try {
+             changeEvent = new Event(type);
+        }
+        catch(err) {
+            console.error(err);
+            changeEvent = document.createEvent(type);
+        }
+
+        return changeEvent;
     }
 
 
