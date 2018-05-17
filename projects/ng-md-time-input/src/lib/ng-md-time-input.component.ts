@@ -521,7 +521,8 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
         }
         // If the browser does not support this way of creating an event (eg. IE11), do it the old way.
         catch (err) {
-            changeEvent = document.createEvent(type);
+            changeEvent = document.createEvent('HTMLEvents');
+            changeEvent.initEvent(type, true,  false);
         }
 
         return changeEvent;
