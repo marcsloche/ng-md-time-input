@@ -89,6 +89,7 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
 
     // NgModel
     propagateChange = (_: any) => { };
+    propagateTouched = () => { };
 
     constructor(
         private changeDetectorRef: ChangeDetectorRef,
@@ -96,6 +97,7 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
         fb: FormBuilder,
         private fm: FocusMonitor,
         @Optional() @Self() public ngControl: NgControl,
+        private _renderer: Renderer2,
         private timeFactoryService: TimeFactoryService) {
 
         // Form initialization. On top of a directive that prevents the input of non
@@ -511,14 +513,14 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
      * This function is to create an event with modern browser or old browser
      * @param type Type of event to create
      */
-    private newEvent(type: string) : Event {
+    private newEvent(type: string): Event {
         let changeEvent: Event;
         // Try creating a new event that is compatible with modern browsers
         try {
-             changeEvent = new Event(type);
+            changeEvent = new Event(type);
         }
         // If the browser does not support this way of creating an event (eg. IE11), do it the old way.
-        catch(err) {
+        catch (err) {
             changeEvent = document.createEvent(type);
         }
 
@@ -581,7 +583,7 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
     set disabled(dis) {
         this._disabled = coerceBooleanProperty(dis);
 
-        if(this._disabled) {
+        if (this._disabled) {
             this.parts.disable();
         }
         else {
@@ -604,7 +606,7 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
     }
 
     emitChanges() {
-        if(this.previousDuration !== this.value) {
+        if (this.previousDuration !== this.value) {
             this.shouldManuallyTriggerChangeEvent = true;
         }
         this.stateChanges.next();
@@ -621,5 +623,12 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
         this.propagateChange = fn;
     }
 
-    registerOnTouched() { }
+    registerOnTouched(fn) {
+        this.propagateTouched = fn;
+    }
+
+    setDisabledState(isDisabled: boolean): void {
+        this._renderer.setProperty(this.elRef.nativeElement, 'disabled', isDisabled);
+        this.disabled = isDisabled;
+    }
 }

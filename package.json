@@ -1,6 +1,6 @@
 {
   "name": "ng-md",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
@@ -9,7 +9,7 @@
     "test": "ng test ng-md-time-input",
     "lint": "ng lint",
     "e2e": "ng e2e",
-    "deploy": "npm run build-prod && cd dist/ng-md-time-input && npm version patch && npm publish"
+    "deploy": "cd projects/ng-md-time-input && npm version patch && cd ../../ && npm run build-prod && cd dist/ng-md-time-input && npm publish"
   },
   "private": true,
   "dependencies": {
