@@ -7,20 +7,5 @@ To install from npm: `npm install --save ng-md-time-input`.
 ## Demo
 `https://stackblitz.com/edit/ng-md-time-input-examples`
 
-
-## Tips for contributors
-### Development server
-Everytime the ng-md-time-input library is changed, you must build the library first before testing it with ng serve. To do so, run `npm run build`.
-Run `ng serve` for a dev server. Navigate to `http://localhost:4200/`. The app will automatically reload if you change any of the source files. As mentionned, if anything in the `projects/ng-md-time-input` folder was changed, you must first build it in order to see the changes.
-
-### Build
-
-Run `npm run build` to run a development build of the ng-md-time-input library. The build artifacts will be stored in the `project/` directory. Use the `npm run build-prod` for a production build.
-
-### Running unit tests
-
-Run `npm run test` to execute the unit tests via [Karma](https://karma-runner.github.io).
-
-### Further help
-
+## Further help
 You can email me if you have any question: `mathieu.dumoulin@outlook.com` :) 
