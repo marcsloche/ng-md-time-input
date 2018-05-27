@@ -1,7 +1,18 @@
-<mat-form-field>
-    <ng-md-time-input [(ngModel)]="testTime" placeholder="Test" [showDays]="showDays" minutesSeparator="" (change)="testChange($event)" (input)="testInput($event)"
-        [required]="true" [disabled]="disabled"></ng-md-time-input>
-</mat-form-field>
+<!-- this is a playground where you can test that the ng-md-time-input works properly.
+     If there is code below, it is only for testing purpose. Feel free to change it as you want. -->
+
+<form [formGroup]="formGroup">
+    <mat-form-field>
+        <ng-md-time-input formControlName="timeInput" [(ngModel)]="testTime" placeholder="Test" [showDays]="showDays" minutesSeparator="" (change)="testChange($event)" (input)="testInput($event)"
+        #timeInput>
+
+        </ng-md-time-input>
+    </mat-form-field>
+<!--     <pre>{{timeInput.errorState}} || {{formGroup.get('timeInput').invalid}}
+        {{formGroup.get('timeInput').errors | json }}
+    </pre> -->
+</form>
+
 
 <div *ngIf="testTime">
     <pre>{{getTime()}}</pre>

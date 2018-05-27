@@ -89,6 +89,7 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
 
     // NgModel
     propagateChange = (_: any) => { };
+    propagateTouched = () => { };
 
     constructor(
         private changeDetectorRef: ChangeDetectorRef,
@@ -96,6 +97,7 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
         fb: FormBuilder,
         private fm: FocusMonitor,
         @Optional() @Self() public ngControl: NgControl,
+        private _renderer: Renderer2,
         private timeFactoryService: TimeFactoryService) {
 
         // Form initialization. On top of a directive that prevents the input of non
@@ -321,7 +323,7 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
             // By default, the change event is only triggered when the user types in a new value.
             // In our case, we want to trigger it when the user increments/decrements the value too.
             if (this.shouldManuallyTriggerChangeEvent) {
-                const changeEvent = new Event('change');
+                const changeEvent = this.newEvent('change');
                 this.elRef.nativeElement.dispatchEvent(changeEvent);
             }
         }
@@ -347,7 +349,7 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
      */
     handleKeydown(event: KeyboardEvent, targettedInputName: string): void {
         // On up arrow, we want to increment the targetted input
-        if (event.key === 'ArrowUp') {
+        if (event.key === 'ArrowUp' || event.key === 'Up') {
             const incrementStep = this.getIncrementStep(targettedInputName);
             this.incrementTime(incrementStep);
             event.preventDefault(); // Prevents the carret from moving to the lefthand of the input
@@ -355,7 +357,7 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
             return;
         }
         // On down arrow, we want to decrement the targetted input
-        else if (event.key === 'ArrowDown') {
+        else if (event.key === 'ArrowDown' || event.key === 'Down') {
             const decrementStep = this.getDecrementStep(targettedInputName);
             this.incrementTime(decrementStep);
             event.preventDefault(); // Prevents the carret from moving to the righthand of the input
@@ -363,7 +365,7 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
             return;
         }
         // On left arrow, we want to move the carret to the left sibling of the targetted input
-        else if (event.key === 'ArrowLeft') {
+        else if (event.key === 'ArrowLeft' || event.key === 'Left') {
             const leftSibling = this.getLeftSiblingOfInput(targettedInputName);
             // The sibling can be null if the carret cannot go further to the left or
             // can be undefined if the ViewChild was not properly initialized.
@@ -377,7 +379,7 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
             return;
         }
         // On right arrow, we want to move the carret to the right sibling of the targetted input
-        else if (event.key === 'ArrowRight') {
+        else if (event.key === 'ArrowRight' || event.key === 'Right') {
             const rightSibling = this.getRightSiblingOfInput(targettedInputName);
             // The sibling can be null if the carret cannot go further to the right or
             // can be undefined if the ViewChild was not properly initialized.
@@ -407,7 +409,7 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
         this.formatDislayedTime();
         this.emitChanges();
         // Since the inputs are not recognizing the increment as an input event, we got to manually trigger one.
-        const inputEvent = new Event('input');
+        const inputEvent = this.newEvent('input');
         this.elRef.nativeElement.dispatchEvent(inputEvent);
     }
 
@@ -507,6 +509,25 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
         this._preventFocusLoss = true;
     }
 
+    /**
+     * This function is to create an event with modern browser or old browser
+     * @param type Type of event to create
+     */
+    private newEvent(type: string): Event {
+        let changeEvent: Event;
+        // Try creating a new event that is compatible with modern browsers
+        try {
+            changeEvent = new Event(type);
+        }
+        // If the browser does not support this way of creating an event (eg. IE11), do it the old way.
+        catch (err) {
+            changeEvent = document.createEvent('HTMLEvents');
+            changeEvent.initEvent(type, true,  false);
+        }
+
+        return changeEvent;
+    }
+
 
     ////////////////////////////////////////////////////////////////////////////
     // Validators
@@ -563,7 +584,7 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
     set disabled(dis) {
         this._disabled = coerceBooleanProperty(dis);
 
-        if(this._disabled) {
+        if (this._disabled) {
             this.parts.disable();
         }
         else {
@@ -586,7 +607,7 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
     }
 
     emitChanges() {
-        if(this.previousDuration !== this.value) {
+        if (this.previousDuration !== this.value) {
             this.shouldManuallyTriggerChangeEvent = true;
         }
         this.stateChanges.next();
@@ -603,5 +624,12 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
         this.propagateChange = fn;
     }
 
-    registerOnTouched() { }
+    registerOnTouched(fn) {
+        this.propagateTouched = fn;
+    }
+
+    setDisabledState(isDisabled: boolean): void {
+        this._renderer.setProperty(this.elRef.nativeElement, 'disabled', isDisabled);
+        this.disabled = isDisabled;
+    }
 }

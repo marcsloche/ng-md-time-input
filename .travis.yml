@@ -19,7 +19,7 @@ script:
   - npm run test
 
 after_success:
-  - npm run deploy
+  - npm run build-prod
 
 notifications:
   email:
