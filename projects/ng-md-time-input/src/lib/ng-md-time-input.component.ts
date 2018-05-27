@@ -510,6 +510,19 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
     }
 
     /**
+     * This function is to put the cursor at the end of input to prevent undesirable behaviour when the cursor is at the beginning  
+     */
+    onClick(event: any) {    
+        const val =  event.target.value;
+
+        if (val) {        
+            const len = event.target.value.length;
+            event.target.setSelectionRange(len, len);
+        }
+    }
+
+
+    /**
      * This function is to create an event with modern browser or old browser
      * @param type Type of event to create
      */
