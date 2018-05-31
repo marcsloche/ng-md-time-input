@@ -1,4 +1,3 @@
-import { ElementRef } from "@angular/core";
 import { ErrorStateMatcher, mixinErrorState } from "@angular/material";
 import { NgForm, FormGroupDirective, NgControl } from "@angular/forms";
 // This import is needed even though it is not implicitly used in order to prevent
@@ -9,7 +8,6 @@ import { CanUpdateErrorState } from "@angular/material";
 // Boilerplate for applying mixins to NgMdTimeInput.
 export class TimeInputBase {
     constructor(
-        public _elementRef: ElementRef,
         public _defaultErrorStateMatcher: ErrorStateMatcher,
         public _parentForm: NgForm,
         public _parentFormGroup: FormGroupDirective,
@@ -17,5 +15,3 @@ export class TimeInputBase {
     ) {}
 }
 export const _TimeInputMixinBase = mixinErrorState(TimeInputBase);
-/* export const _MatSelectMixinBase = mixinDisableRipple(
-      mixinTabIndex(mixinDisabled(mixinErrorState(MatSelectBase)))); */

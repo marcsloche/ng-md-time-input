@@ -46,10 +46,22 @@ import { TimeFactoryService } from "./time-factory.service";
     selector: "ng-md-time-input",
     templateUrl: "./ng-md-time-input.component.html",
     styleUrls: ["./ng-md-time-input.component.css"],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    host: {
+        role: "textbox",
+        "[attr.id]": "id",
+        "[attr.aria-required]": "required.toString()",
+        "[attr.aria-disabled]": "disabled.toString()",
+        "[attr.aria-invalid]": "errorState",
+        "[attr.aria-describedby]": "describedBy || null",
+        "[class.ng-md-time-input-disabled]": "disabled",
+        "[class.ng-md-time-input-invalid]": "errorState",
+        "[class.ng-md-time-input-required]": "required",
+        class: "ng-md-time-input"
+    },
     providers: [
         { provide: MatFormFieldControl, useExisting: NgMdTimeInputComponent }
-    ],
-    changeDetection: ChangeDetectionStrategy.OnPush
+    ]
 })
 export class NgMdTimeInputComponent extends _TimeInputMixinBase
     implements
@@ -85,14 +97,16 @@ export class NgMdTimeInputComponent extends _TimeInputMixinBase
     @ViewChild("daysUnit") daysUnit: ElementRef;
     @ViewChild("daysDecimal") daysDecimal: ElementRef;
     // For the change event
+    // By default, the change event is only triggered when the user types in a new value.
+    // In our case, we want to trigger it when the user increments/decrements the value too.
     private previousDuration: Duration = null;
     private shouldManuallyTriggerChangeEvent: boolean;
     //////////////////////////////////////////////////////////////////
     // For Mat Form Field
     // Used by Angular Material to map hints and errors to the control.
-    @HostBinding() id = `time-input-${NgMdTimeInputComponent.nextId++}`;
+    id = `time-input-${NgMdTimeInputComponent.nextId++}`;
     // Used by Angular Material to bind Aria ids to our control
-    @HostBinding("attr.aria-describedby") describedBy = "";
+    describedBy = "";
 
     parts: FormGroup;
     private _placeholder: string;
@@ -111,9 +125,7 @@ export class NgMdTimeInputComponent extends _TimeInputMixinBase
         fb: FormBuilder,
         private fm: FocusMonitor,
         _defaultErrorStateMatcher: ErrorStateMatcher,
-        @Optional()
-        @Self()
-        ngControl: NgControl,
+        @Optional() @Self() ngControl: NgControl,
         @Optional() _parentForm: NgForm,
         @Optional() _parentFormGroup: FormGroupDirective,
         private _renderer: Renderer2,
@@ -121,7 +133,6 @@ export class NgMdTimeInputComponent extends _TimeInputMixinBase
     ) {
         // Passing the context of the component to the state manager
         super(
-            elRef,
             _defaultErrorStateMatcher,
             _parentForm,
             _parentFormGroup,
@@ -138,14 +149,6 @@ export class NgMdTimeInputComponent extends _TimeInputMixinBase
             minutesDecimal: ["", Validators.pattern(/[0-9]/)],
             minutesUnit: ["", this.getMinutesUnitValidator()]
         });
-
-        // Subscribing to the form's status change in order to sync up the state of the NgControl with
-        // the one of the form.
-        this.subscriptions.push(
-            this.parts.statusChanges.subscribe(() =>
-                this.handleFormStatusChange()
-            )
-        );
 
         // Monitoring the focus in the time input.
         fm
@@ -391,6 +394,7 @@ export class NgMdTimeInputComponent extends _TimeInputMixinBase
         // If the component just gain the focus, automatically focus the rightmost input.
         if (!this.focused && elementIsFocused) {
             this.focusLastInput(origin);
+            console.log("Focused with handleFocusChange");
         }
 
         // Setting up the focused state. The element is focused when we prevent the focus loss
@@ -399,6 +403,7 @@ export class NgMdTimeInputComponent extends _TimeInputMixinBase
 
         // If the component has been focused out, format the displayed time.
         if (!this.focused) {
+            console.log("Blurred with handleFocusChange");
             this.formatDislayedTime();
             if (this.ngControl) {
                 this.ngControl.control.markAsTouched();
@@ -416,13 +421,12 @@ export class NgMdTimeInputComponent extends _TimeInputMixinBase
         this.stateChanges.next();
     }
 
-    private handleFormStatusChange() {
-        /*         if (!this.parts.invalid && this.errorState) {
-                    this.errorState = false;
-                }
-                else if (this.parts.invalid && !this.errorState) {
-                    this.errorState = true;
-                } */
+    _onFocus() {
+        console.log("Focused with OnFocus");
+    }
+
+    _onBlur() {
+        console.log("Blurred with OnBlur");
     }
 
     /**
@@ -761,12 +765,14 @@ export class NgMdTimeInputComponent extends _TimeInputMixinBase
         this.propagateTouched = fn;
     }
 
+    /**
+     * Disables the select. Part of the ControlValueAccessor interface required
+     * to integrate with Angular's core forms API.
+     *
+     * @param isDisabled Sets whether the component is disabled.
+     */
     setDisabledState(isDisabled: boolean): void {
-        this._renderer.setProperty(
-            this.elRef.nativeElement,
-            "disabled",
-            isDisabled
-        );
         this.disabled = isDisabled;
+        this.stateChanges.next();
     }
 }
