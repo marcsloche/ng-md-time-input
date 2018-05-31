@@ -1,5 +1,5 @@
 import { Component } from '@angular/core';
-import { FormBuilder, FormGroup } from '@angular/forms';
+import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 // Moment
 import { Moment } from "moment";
 import * as moment from "moment";
@@ -12,23 +12,23 @@ import * as moment from "moment";
 export class AppComponent {
     formGroup: FormGroup;
     title = 'app';
-    required = false;
+    required = true;
     disabled = false;
-    public testTime = moment.duration();
+    public testTime = null;
     testValue = "Hi!";
     showDays = false;
 
     constructor(private fb: FormBuilder) {
 
         this.formGroup = fb.group({
-            timeInput: [""]
+            timeInput: ["", Validators.required]
         });
 
-        setTimeout(() =>  {
+        /* setTimeout(() =>  {
             this.testValue = "fdfasdd";
             this.formGroup.disable();
             // this.formGroup.get('timeInput').setErrors({invalid: 'invalid'});
-        }, 5000);
+        }, 5000); */
     }
 
     testChange(event) {

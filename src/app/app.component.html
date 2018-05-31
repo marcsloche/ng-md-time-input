@@ -4,13 +4,13 @@
 <form [formGroup]="formGroup">
     <mat-form-field>
         <ng-md-time-input formControlName="timeInput" [(ngModel)]="testTime" placeholder="Test" [showDays]="showDays" minutesSeparator="" (change)="testChange($event)" (input)="testInput($event)"
-        #timeInput>
+         #timeInput>
 
         </ng-md-time-input>
     </mat-form-field>
-<!--     <pre>{{timeInput.errorState}} || {{formGroup.get('timeInput').invalid}}
+    <pre>{{timeInput.errorState}} || {{formGroup.get('timeInput').invalid}}
         {{formGroup.get('timeInput').errors | json }}
-    </pre> -->
+    </pre>
 </form>
 
 

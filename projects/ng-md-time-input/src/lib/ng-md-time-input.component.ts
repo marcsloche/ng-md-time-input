@@ -11,7 +11,8 @@ import {
     Optional,
     Renderer2,
     Self,
-    ViewChild
+    ViewChild,
+    DoCheck
 } from "@angular/core";
 import {
     ControlValueAccessor,
@@ -22,28 +23,42 @@ import {
     Validators,
     AbstractControl,
     Validator,
-    ValidatorFn
+    ValidatorFn,
+    NgForm,
+    FormGroupDirective
 } from "@angular/forms";
-import { MatFormFieldControl } from "@angular/material";
+import {
+    MatFormFieldControl,
+    ErrorStateMatcher,
+    CanUpdateErrorState
+} from "@angular/material";
 import { FocusMonitor, FocusOrigin } from "@angular/cdk/a11y";
 import { coerceBooleanProperty } from "@angular/cdk/coercion";
 import { Subject, Subscription } from "rxjs";
+// Control state management
+import { _TimeInputMixinBase } from "./control-state";
 // Moment
 import { Duration, duration, isDuration } from "moment";
 // Others
-import { TimeFactoryService } from './time-factory.service';
-
+import { TimeFactoryService } from "./time-factory.service";
 
 @Component({
-    selector: 'ng-md-time-input',
+    selector: "ng-md-time-input",
     templateUrl: "./ng-md-time-input.component.html",
     styleUrls: ["./ng-md-time-input.component.css"],
     providers: [
-        { provide: MatFormFieldControl, useExisting: NgMdTimeInputComponent },
+        { provide: MatFormFieldControl, useExisting: NgMdTimeInputComponent }
     ],
     changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldControl<Duration>, ControlValueAccessor {
+export class NgMdTimeInputComponent extends _TimeInputMixinBase
+    implements
+        OnInit,
+        DoCheck,
+        OnDestroy,
+        MatFormFieldControl<Duration>,
+        ControlValueAccessor,
+        CanUpdateErrorState {
     static nextId = 0;
     // Inputs and Outputs
     @Input() daysSeparator = "d";
@@ -84,21 +99,34 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
     focused = false;
     private _required = false;
     private _disabled = false;
-    errorState = false; // By default the input is valid.
     controlType = "time-input"; // Class identifier for this control will be mat-form-field-time-input.
 
     // NgModel
-    propagateChange = (_: any) => { };
-    propagateTouched = () => { };
+    propagateChange = (_: any) => {};
+    propagateTouched = () => {};
 
     constructor(
         private changeDetectorRef: ChangeDetectorRef,
         private elRef: ElementRef,
         fb: FormBuilder,
         private fm: FocusMonitor,
-        @Optional() @Self() public ngControl: NgControl,
+        _defaultErrorStateMatcher: ErrorStateMatcher,
+        @Optional()
+        @Self()
+        ngControl: NgControl,
+        @Optional() _parentForm: NgForm,
+        @Optional() _parentFormGroup: FormGroupDirective,
         private _renderer: Renderer2,
-        private timeFactoryService: TimeFactoryService) {
+        private timeFactoryService: TimeFactoryService
+    ) {
+        // Passing the context of the component to the state manager
+        super(
+            elRef,
+            _defaultErrorStateMatcher,
+            _parentForm,
+            _parentFormGroup,
+            ngControl
+        );
 
         // Form initialization. On top of a directive that prevents the input of non
         // numerical char, we add a pattern to assure that only numbers are allowed.
@@ -114,11 +142,15 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
         // Subscribing to the form's status change in order to sync up the state of the NgControl with
         // the one of the form.
         this.subscriptions.push(
-            this.parts.statusChanges.subscribe(() => this.handleFormStatusChange())
+            this.parts.statusChanges.subscribe(() =>
+                this.handleFormStatusChange()
+            )
         );
 
         // Monitoring the focus in the time input.
-        fm.monitor(elRef.nativeElement, true).subscribe(origin => this.handleFocusChange(origin));
+        fm
+            .monitor(elRef.nativeElement, true)
+            .subscribe(origin => this.handleFocusChange(origin));
 
         if (this.ngControl != null) {
             this.ngControl.valueAccessor = this;
@@ -137,6 +169,13 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
         this.fm.stopMonitoring(this.elRef.nativeElement);
         for (const sub of this.subscriptions) {
             sub.unsubscribe();
+        }
+    }
+
+    ngDoCheck() {
+        // Refreshes the error state of the component when its state changes.
+        if (this.ngControl) {
+            this.updateErrorState();
         }
     }
 
@@ -170,11 +209,14 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
      * Note: This affectation will not change the ngModel value.
      */
     set displayedDays(days: string) {
-        this.parts.get('daysDecimal').setValue(days.charAt(days.length - 2));
-        this.parts.get('daysUnit').setValue(days.charAt(days.length - 1));
+        this.parts.get("daysDecimal").setValue(days.charAt(days.length - 2));
+        this.parts.get("daysUnit").setValue(days.charAt(days.length - 1));
     }
     get displayedDays(): string {
-        return this.parts.get('daysDecimal').value + this.parts.get('daysUnit').value;
+        return (
+            this.parts.get("daysDecimal").value +
+            this.parts.get("daysUnit").value
+        );
     }
 
     /**
@@ -182,11 +224,14 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
      * Note: This affectation will not change the ngModel value.
      */
     set displayedHours(hours: string) {
-        this.parts.get('hoursDecimal').setValue(hours.charAt(hours.length - 2));
-        this.parts.get('hoursUnit').setValue(hours.charAt(hours.length - 1));
+        this.parts.get("hoursDecimal").setValue(hours.charAt(hours.length - 2));
+        this.parts.get("hoursUnit").setValue(hours.charAt(hours.length - 1));
     }
     get displayedHours(): string {
-        return this.parts.get('hoursDecimal').value + this.parts.get('hoursUnit').value;
+        return (
+            this.parts.get("hoursDecimal").value +
+            this.parts.get("hoursUnit").value
+        );
     }
 
     /**
@@ -194,11 +239,18 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
      * Note: This affectation will not change the ngModel value.
      */
     set displayedMinutes(minutes: string) {
-        this.parts.get('minutesDecimal').setValue(minutes.charAt(minutes.length - 2));
-        this.parts.get('minutesUnit').setValue(minutes.charAt(minutes.length - 1));
+        this.parts
+            .get("minutesDecimal")
+            .setValue(minutes.charAt(minutes.length - 2));
+        this.parts
+            .get("minutesUnit")
+            .setValue(minutes.charAt(minutes.length - 1));
     }
     get displayedMinutes(): string {
-        return this.parts.get('minutesDecimal').value + this.parts.get('minutesUnit').value;
+        return (
+            this.parts.get("minutesDecimal").value +
+            this.parts.get("minutesUnit").value
+        );
     }
 
     ////////////////////////////////////////////////////////////////////////////
@@ -209,7 +261,11 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
      */
     updateTime(): void {
         this.updateDisplayedTime();
-        this.setTimeFromString(this.displayedDays, this.displayedHours, this.displayedMinutes);
+        this.setTimeFromString(
+            this.displayedDays,
+            this.displayedHours,
+            this.displayedMinutes
+        );
     }
 
     /**
@@ -232,21 +288,32 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
      * @param minutesString The minutes to set. The minutes will be onverted to a 60 minutes format. This means
      *                      if the given minute 61, it will add an hour and set the minutes to 01.
      */
-    setTimeFromString(daysString: string, hoursString: string, minutesString: string): void {
+    setTimeFromString(
+        daysString: string,
+        hoursString: string,
+        minutesString: string
+    ): void {
         // First of, we parse the strings to number in order to validate if they are numbers.
         let days = parseInt(daysString, 10);
         let hours = parseInt(hoursString, 10);
         let minutes = parseInt(minutesString, 10);
 
         // The strings can be NaN if they are empty, null, undefined or contain a letter.
-        if (Number.isNaN(days) && Number.isNaN(hours) && Number.isNaN(minutes)) {
+        if (
+            Number.isNaN(days) &&
+            Number.isNaN(hours) &&
+            Number.isNaN(minutes)
+        ) {
             this.time = null;
-        }
-        else {
+        } else {
             days = Number.isNaN(days) ? 0 : days;
             hours = Number.isNaN(hours) ? 0 : hours;
             minutes = Number.isNaN(minutes) ? 0 : minutes;
-            this.setTimeFromMinutes(days * this.NUMBER_OF_MINUTES_IN_DAY + hours * this.NUMBER_OF_MINUTES_IN_HOUR + minutes);
+            this.setTimeFromMinutes(
+                days * this.NUMBER_OF_MINUTES_IN_DAY +
+                    hours * this.NUMBER_OF_MINUTES_IN_HOUR +
+                    minutes
+            );
         }
 
         this.emitChanges();
@@ -255,14 +322,13 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
     private setTimeFromMinutes(minutes: number) {
         // If the time is greater than the max time, set it to the max time.
         if (minutes > this.MAX_TIME_IN_MINUTES) {
-            this.time = duration(this.MAX_TIME_IN_MINUTES, 'minutes');
+            this.time = duration(this.MAX_TIME_IN_MINUTES, "minutes");
         }
         // Else, if the time is negative, set it to 0.
         else if (minutes < 0) {
             this.time = duration();
-        }
-        else {
-            this.time = duration(minutes, 'minutes');
+        } else {
+            this.time = duration(minutes, "minutes");
         }
     }
 
@@ -278,9 +344,21 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
         }
         // Else, update the model with the written time.
         else {
-            this.displayedDays = this.padWithChar("0", Math.floor(this.time.asDays()).toString(), 2);
-            this.displayedHours = this.padWithChar("0", this.time.hours().toString(), 2);
-            this.displayedMinutes = this.padWithChar("0", this.time.minutes().toString(), 2);
+            this.displayedDays = this.padWithChar(
+                "0",
+                Math.floor(this.time.asDays()).toString(),
+                2
+            );
+            this.displayedHours = this.padWithChar(
+                "0",
+                this.time.hours().toString(),
+                2
+            );
+            this.displayedMinutes = this.padWithChar(
+                "0",
+                this.time.minutes().toString(),
+                2
+            );
         }
     }
 
@@ -291,15 +369,20 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
      * @param desiredFinalLength The final desired length of the string.
      * @returns The padded representation of the given value.
      */
-    private padWithChar(char: string, valueToPad: string, desiredFinalLength: number): string {
+    private padWithChar(
+        char: string,
+        valueToPad: string,
+        desiredFinalLength: number
+    ): string {
         if (!char || char.length !== 1) {
-            throw new Error("[padWithChar] Cannot have multiple characters as padding. Only one is allowed.");
+            throw new Error(
+                "[padWithChar] Cannot have multiple characters as padding. Only one is allowed."
+            );
         }
 
         const paddedString = char.repeat(desiredFinalLength) + valueToPad;
         return paddedString.slice(desiredFinalLength * -1);
     }
-
 
     ////////////////////////////////////////////////////////////////////////////
     // Event handling
@@ -323,7 +406,7 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
             // By default, the change event is only triggered when the user types in a new value.
             // In our case, we want to trigger it when the user increments/decrements the value too.
             if (this.shouldManuallyTriggerChangeEvent) {
-                const changeEvent = this.newEvent('change');
+                const changeEvent = this.newEvent("change");
                 this.elRef.nativeElement.dispatchEvent(changeEvent);
             }
         }
@@ -334,12 +417,12 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
     }
 
     private handleFormStatusChange() {
-        if (!this.parts.invalid && this.errorState) {
-            this.errorState = false;
-        }
-        else if (this.parts.invalid && !this.errorState) {
-            this.errorState = true;
-        }
+        /*         if (!this.parts.invalid && this.errorState) {
+                    this.errorState = false;
+                }
+                else if (this.parts.invalid && !this.errorState) {
+                    this.errorState = true;
+                } */
     }
 
     /**
@@ -349,7 +432,7 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
      */
     handleKeydown(event: KeyboardEvent, targettedInputName: string): void {
         // On up arrow, we want to increment the targetted input
-        if (event.key === 'ArrowUp' || event.key === 'Up') {
+        if (event.key === "ArrowUp" || event.key === "Up") {
             const incrementStep = this.getIncrementStep(targettedInputName);
             this.incrementTime(incrementStep);
             event.preventDefault(); // Prevents the carret from moving to the lefthand of the input
@@ -357,7 +440,7 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
             return;
         }
         // On down arrow, we want to decrement the targetted input
-        else if (event.key === 'ArrowDown' || event.key === 'Down') {
+        else if (event.key === "ArrowDown" || event.key === "Down") {
             const decrementStep = this.getDecrementStep(targettedInputName);
             this.incrementTime(decrementStep);
             event.preventDefault(); // Prevents the carret from moving to the righthand of the input
@@ -365,7 +448,7 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
             return;
         }
         // On left arrow, we want to move the carret to the left sibling of the targetted input
-        else if (event.key === 'ArrowLeft' || event.key === 'Left') {
+        else if (event.key === "ArrowLeft" || event.key === "Left") {
             const leftSibling = this.getLeftSiblingOfInput(targettedInputName);
             // The sibling can be null if the carret cannot go further to the left or
             // can be undefined if the ViewChild was not properly initialized.
@@ -379,8 +462,10 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
             return;
         }
         // On right arrow, we want to move the carret to the right sibling of the targetted input
-        else if (event.key === 'ArrowRight' || event.key === 'Right') {
-            const rightSibling = this.getRightSiblingOfInput(targettedInputName);
+        else if (event.key === "ArrowRight" || event.key === "Right") {
+            const rightSibling = this.getRightSiblingOfInput(
+                targettedInputName
+            );
             // The sibling can be null if the carret cannot go further to the right or
             // can be undefined if the ViewChild was not properly initialized.
             if (rightSibling && rightSibling.nativeElement.value) {
@@ -409,7 +494,7 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
         this.formatDislayedTime();
         this.emitChanges();
         // Since the inputs are not recognizing the increment as an input event, we got to manually trigger one.
-        const inputEvent = this.newEvent('input');
+        const inputEvent = this.newEvent("input");
         this.elRef.nativeElement.dispatchEvent(inputEvent);
     }
 
@@ -418,12 +503,18 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
      */
     private getIncrementStep(inputName: string): number {
         switch (inputName) {
-            case 'daysDecimal': return this.NUMBER_OF_MINUTES_IN_TEN_DAYS;
-            case 'daysUnit': return this.NUMBER_OF_MINUTES_IN_DAY;
-            case 'hoursDecimal': return this.getHoursDecimalIncrementStep();
-            case 'hoursUnit': return this.NUMBER_OF_MINUTES_IN_HOUR;
-            case 'minutesDecimal': return this.NUMBER_OF_MINUTES_IN_TEN_MINUTES;
-            case 'minutesUnit': return this.MINUTES_UNIT_INCREMENT_STEP;
+            case "daysDecimal":
+                return this.NUMBER_OF_MINUTES_IN_TEN_DAYS;
+            case "daysUnit":
+                return this.NUMBER_OF_MINUTES_IN_DAY;
+            case "hoursDecimal":
+                return this.getHoursDecimalIncrementStep();
+            case "hoursUnit":
+                return this.NUMBER_OF_MINUTES_IN_HOUR;
+            case "minutesDecimal":
+                return this.NUMBER_OF_MINUTES_IN_TEN_MINUTES;
+            case "minutesUnit":
+                return this.MINUTES_UNIT_INCREMENT_STEP;
         }
     }
     /**
@@ -431,38 +522,57 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
      */
     private getDecrementStep(inputName: string): number {
         switch (inputName) {
-            case 'daysDecimal': return -1 * this.NUMBER_OF_MINUTES_IN_TEN_DAYS;
-            case 'daysUnit': return -1 * this.NUMBER_OF_MINUTES_IN_DAY;
-            case 'hoursDecimal': return this.getHoursDecimalDecrementStep();
-            case 'hoursUnit': return -1 * this.NUMBER_OF_MINUTES_IN_HOUR;
-            case 'minutesDecimal': return -1 * this.NUMBER_OF_MINUTES_IN_TEN_MINUTES;
-            case 'minutesUnit': return -1 * this.MINUTES_UNIT_INCREMENT_STEP;
+            case "daysDecimal":
+                return -1 * this.NUMBER_OF_MINUTES_IN_TEN_DAYS;
+            case "daysUnit":
+                return -1 * this.NUMBER_OF_MINUTES_IN_DAY;
+            case "hoursDecimal":
+                return this.getHoursDecimalDecrementStep();
+            case "hoursUnit":
+                return -1 * this.NUMBER_OF_MINUTES_IN_HOUR;
+            case "minutesDecimal":
+                return -1 * this.NUMBER_OF_MINUTES_IN_TEN_MINUTES;
+            case "minutesUnit":
+                return -1 * this.MINUTES_UNIT_INCREMENT_STEP;
         }
     }
 
     private getHoursDecimalIncrementStep(): number {
-        const currentNumberOfMinutesInTime = this.time.hours() * 60 + this.time.minutes();
+        const currentNumberOfMinutesInTime =
+            this.time.hours() * 60 + this.time.minutes();
         let incrementStep = this.NUMBER_OF_MINUTES_IN_TEN_HOURS;
 
         // The hours are on a base 24, which means that we have to adjust the increment step
         // so that the increment does not change the hours unit. (Ex: We increment the hours decimal of 0d 15:00,
         // we don't want it to display as 1d 01:00, but we want it as 1d 05:00).
-        if (currentNumberOfMinutesInTime + this.NUMBER_OF_MINUTES_IN_TEN_HOURS > this.NUMBER_OF_MINUTES_IN_DAY) {
-            incrementStep = ((24 - this.time.hours()) + this.time.hours() % 10) * this.NUMBER_OF_MINUTES_IN_HOUR;
+        if (
+            currentNumberOfMinutesInTime + this.NUMBER_OF_MINUTES_IN_TEN_HOURS >
+            this.NUMBER_OF_MINUTES_IN_DAY
+        ) {
+            incrementStep =
+                (24 - this.time.hours() + this.time.hours() % 10) *
+                this.NUMBER_OF_MINUTES_IN_HOUR;
         }
 
         return incrementStep;
     }
 
     private getHoursDecimalDecrementStep(): number {
-        const currentNumberOfMinutesInTime = this.time.hours() * 60 + this.time.minutes();
+        const currentNumberOfMinutesInTime =
+            this.time.hours() * 60 + this.time.minutes();
         let decrementStep = this.NUMBER_OF_MINUTES_IN_TEN_HOURS * -1;
 
         // The hours are on a base 24, which means that we have to adjust the decrement step
         // so that the decrement does not change the hours unit. (Ex: We decrement the hours decimal of 1d 09:00,
         // we don't want it to display as 0d 23:00, but we want it as 0d 19:00).
-        if (currentNumberOfMinutesInTime - this.NUMBER_OF_MINUTES_IN_TEN_HOURS < 0) {
-            decrementStep = (this.time.hours() + (14 - this.time.hours()) % 10) * this.NUMBER_OF_MINUTES_IN_HOUR * -1;
+        if (
+            currentNumberOfMinutesInTime - this.NUMBER_OF_MINUTES_IN_TEN_HOURS <
+            0
+        ) {
+            decrementStep =
+                (this.time.hours() + (14 - this.time.hours()) % 10) *
+                this.NUMBER_OF_MINUTES_IN_HOUR *
+                -1;
         }
 
         return decrementStep;
@@ -470,22 +580,34 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
 
     private getLeftSiblingOfInput(inputName: string): ElementRef | null {
         switch (inputName) {
-            case 'daysDecimal': return null;
-            case 'daysUnit': return this.daysDecimal;
-            case 'hoursDecimal': return this.daysUnit;
-            case 'hoursUnit': return this.hoursDecimal;
-            case 'minutesDecimal': return this.hoursUnit;
-            case 'minutesUnit': return this.minutesDecimal;
+            case "daysDecimal":
+                return null;
+            case "daysUnit":
+                return this.daysDecimal;
+            case "hoursDecimal":
+                return this.daysUnit;
+            case "hoursUnit":
+                return this.hoursDecimal;
+            case "minutesDecimal":
+                return this.hoursUnit;
+            case "minutesUnit":
+                return this.minutesDecimal;
         }
     }
     private getRightSiblingOfInput(inputName: string): ElementRef | null {
         switch (inputName) {
-            case 'daysDecimal': return this.daysUnit;
-            case 'daysUnit': return this.hoursDecimal;
-            case 'hoursDecimal': return this.hoursUnit;
-            case 'hoursUnit': return this.minutesDecimal;
-            case 'minutesDecimal': return this.minutesUnit;
-            case 'minutesUnit': return null;
+            case "daysDecimal":
+                return this.daysUnit;
+            case "daysUnit":
+                return this.hoursDecimal;
+            case "hoursDecimal":
+                return this.hoursUnit;
+            case "hoursUnit":
+                return this.minutesDecimal;
+            case "minutesDecimal":
+                return this.minutesUnit;
+            case "minutesUnit":
+                return null;
         }
     }
 
@@ -510,6 +632,18 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
     }
 
     /**
+     * This function is to put the cursor at the end of input to prevent undesirable behaviour when the cursor is at the beginning
+     */
+    onClick(event: any) {
+        const val = event.target.value;
+
+        if (val) {
+            const len = event.target.value.length;
+            event.target.setSelectionRange(len, len);
+        }
+    }
+
+    /**
      * This function is to create an event with modern browser or old browser
      * @param type Type of event to create
      */
@@ -518,16 +652,14 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
         // Try creating a new event that is compatible with modern browsers
         try {
             changeEvent = new Event(type);
-        }
-        // If the browser does not support this way of creating an event (eg. IE11), do it the old way.
-        catch (err) {
-            changeEvent = document.createEvent('HTMLEvents');
-            changeEvent.initEvent(type, true,  false);
+        } catch (err) {
+            // If the browser does not support this way of creating an event (eg. IE11), do it the old way.
+            changeEvent = document.createEvent("HTMLEvents");
+            changeEvent.initEvent(type, true, false);
         }
 
         return changeEvent;
     }
-
 
     ////////////////////////////////////////////////////////////////////////////
     // Validators
@@ -557,7 +689,7 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
     }
 
     // Used by Angular Material to display the label properly
-    @HostBinding('class.floating')
+    @HostBinding("class.floating")
     get shouldLabelFloat() {
         return this.focused || !this.empty;
     }
@@ -570,7 +702,9 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
     set required(req) {
         this._required = coerceBooleanProperty(req);
         // Updating the required status of the inputs.
-        this.parts.get("minutesUnit").setValidators(this.getMinutesUnitValidator());
+        this.parts
+            .get("minutesUnit")
+            .setValidators(this.getMinutesUnitValidator());
         this.parts.get("minutesUnit").updateValueAndValidity(); // To trigger the new validators.
 
         this.stateChanges.next();
@@ -586,8 +720,7 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
 
         if (this._disabled) {
             this.parts.disable();
-        }
-        else {
+        } else {
             this.parts.enable();
         }
 
@@ -629,7 +762,11 @@ export class NgMdTimeInputComponent implements OnInit, OnDestroy, MatFormFieldCo
     }
 
     setDisabledState(isDisabled: boolean): void {
-        this._renderer.setProperty(this.elRef.nativeElement, 'disabled', isDisabled);
+        this._renderer.setProperty(
+            this.elRef.nativeElement,
+            "disabled",
+            isDisabled
+        );
         this.disabled = isDisabled;
     }
 }
