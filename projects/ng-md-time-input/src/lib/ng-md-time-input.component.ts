@@ -42,7 +42,18 @@ import { MomentDurationAdapter, TimeInputAdapter } from "./adapters";
     providers: [
         { provide: MatFormFieldControl, useExisting: NgMdTimeInputComponent }
     ],
-    changeDetection: ChangeDetectionStrategy.OnPush
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    inputs: [
+        "daysSeparator",
+        "hoursSeparator",
+        "minutesSeparator",
+        "showDays",
+        "timeAdapter",
+        "value",
+        "placeholder",
+        "disabled",
+        "required"
+    ]
 })
 export class NgMdTimeInputComponent
     implements
@@ -51,28 +62,13 @@ export class NgMdTimeInputComponent
         MatFormFieldControl<Duration | Moment | Date>,
         ControlValueAccessor {
     static nextId = 0;
-    // Inputs and Outputs
-    @Input() daysSeparator = "d";
-    @Input() hoursSeparator = ":";
-    @Input() minutesSeparator = "";
-    @Input() showDays = true;
-    @Input()
-    set timeAdapter(adapter: TimeInputAdapter<Duration | Moment | Date>) {
-        // Check if the current time object matches the new adapter.
-        if (this.time && !adapter.isValid(this.time)) {
-            // If it is not the case, log an error
-            throw new Error(
-                "The given TimeInputAdapter does not match the current NgModel value type."
-            );
-        } else {
-            this._timeAdapter = adapter;
-        }
-    }
+    // UI
+    daysSeparator = "d";
+    hoursSeparator = ":";
+    minutesSeparator = "";
+    private _showDays = true;
     // Time management
     time: Duration | Moment | Date;
-    get timeAdapter(): TimeInputAdapter<Duration | Moment | Date> {
-        return this.timeAdapter;
-    }
     private _timeAdapter: TimeInputAdapter<
         Duration | Moment | Date
     > = new MomentDurationAdapter();
@@ -82,7 +78,9 @@ export class NgMdTimeInputComponent
     private readonly NUMBER_OF_MINUTES_IN_TEN_HOURS = 600;
     private readonly NUMBER_OF_MINUTES_IN_DAY = 1440;
     private readonly NUMBER_OF_MINUTES_IN_TEN_DAYS = 14400;
-    private readonly MAX_TIME_IN_MINUTES = 143999; // 99d 23:59
+    private readonly MAX_TIME_WITH_DAYS = 143999; // 99d 23:59
+    private readonly MAX_TIME_WITHOUT_DAYS = 1439; // 23:59
+    private _maxTimeInMinutes = this.MAX_TIME_WITH_DAYS; // 99d 23:59
     // Form element management
     private _preventFocusLoss = false;
     private subscriptions: Subscription[] = [];
@@ -170,8 +168,10 @@ export class NgMdTimeInputComponent
         }
     }
 
+    /////////////////////////////////////////////////////////////////////
+    // Getters and setters
+
     // This is where the NgModel with update our time.
-    @Input()
     get value(): Duration | Moment | Date | null {
         return this.time;
     }
@@ -187,6 +187,33 @@ export class NgMdTimeInputComponent
         this.emitChanges();
         this.shouldManuallyTriggerChangeEvent = false;
     }
+
+    set showDays(showDays: boolean) {
+        this._showDays = showDays;
+        this._maxTimeInMinutes = showDays
+            ? this.MAX_TIME_WITH_DAYS
+            : this.MAX_TIME_WITHOUT_DAYS;
+    }
+    get showDays(): boolean {
+        return this._showDays;
+    }
+
+    set timeAdapter(adapter: TimeInputAdapter<Duration | Moment | Date>) {
+        // Check if the current time object matches the new adapter.
+        if (this.time && !adapter.isValid(this.time)) {
+            // If it is not the case, log an error
+            throw new Error(
+                "The given TimeInputAdapter does not match the current NgModel value type."
+            );
+        } else {
+            this._timeAdapter = adapter;
+        }
+    }
+
+    get timeAdapter(): TimeInputAdapter<Duration | Moment | Date> {
+        return this._timeAdapter;
+    }
+    ////////////////////////////////////////////////////////////////////
 
     /**
      * Gets the string representation of the displayed time.
@@ -313,8 +340,8 @@ export class NgMdTimeInputComponent
             hours * this.NUMBER_OF_MINUTES_IN_HOUR +
             minutes;
         // If the time is greater than the max time, set it to the max time.
-        if (timeInMinutes > this.MAX_TIME_IN_MINUTES) {
-            this.time = this.timeAdapter.create(0, 0, this.MAX_TIME_IN_MINUTES);
+        if (timeInMinutes > this._maxTimeInMinutes) {
+            this.time = this.timeAdapter.create(0, 0, this._maxTimeInMinutes);
         }
         // Else, if the time is negative, set it to 0.
         else if (timeInMinutes < 0) {
@@ -736,7 +763,8 @@ export class NgMdTimeInputComponent
         this.previousTime = this.value;
     }
 
-    // ----------For the ngModel two way binding -------------------------------//
+    ////////////////////////////////////////////////////////////////////////////
+    // For the ngModel two way binding
     writeValue(value: Duration | null) {
         this.value = value;
     }

@@ -69,7 +69,7 @@ describe('NgMdTimeInputComponent', () => {
         component.writeValue(currentTime);
         fixture.detectChanges();
         const timeInComponent = component.time;
-        expect(currentTime.asMinutes()).toEqual(timeInComponent.asMinutes());
+        expect(currentTime.asMinutes()).toEqual((<Duration>component.time).asMinutes());
     });
 
     describe('Keyboard events', () => {
@@ -85,7 +85,7 @@ describe('NgMdTimeInputComponent', () => {
             });
             getInput(MINUTES_UNIT_INPUT_ID).dispatchEvent(event);
 
-            expect(expectedTime.asMinutes()).toEqual(component.time.asMinutes());
+            expect(expectedTime.asMinutes()).toEqual((<Duration>component.time).asMinutes());
         });
 
         it('should decrement minutes unit by 1.', () => {
@@ -100,7 +100,7 @@ describe('NgMdTimeInputComponent', () => {
             });
             getInput(MINUTES_UNIT_INPUT_ID).dispatchEvent(event);
 
-            expect(expectedTime.asMinutes()).toEqual(component.time.asMinutes());
+            expect(expectedTime.asMinutes()).toEqual((<Duration>component.time).asMinutes());
         });
 
         it('should increment minutes decimal by 1.', () => {
@@ -115,7 +115,7 @@ describe('NgMdTimeInputComponent', () => {
             });
             getInput(MINUTES_DECIMAL_INPUT_ID).dispatchEvent(event);
 
-            expect(expectedTime.asMinutes()).toEqual(component.time.asMinutes());
+            expect(expectedTime.asMinutes()).toEqual((<Duration>component.time).asMinutes());
         });
 
         it('should decrement minutes decimal by 1', () => {
@@ -130,7 +130,7 @@ describe('NgMdTimeInputComponent', () => {
             });
             getInput(MINUTES_DECIMAL_INPUT_ID).dispatchEvent(event);
 
-            expect(expectedTime.asMinutes()).toEqual(component.time.asMinutes());
+            expect(expectedTime.asMinutes()).toEqual((<Duration>component.time).asMinutes());
         });
 
         it('should increment hours unit by 1', () => {
@@ -145,7 +145,7 @@ describe('NgMdTimeInputComponent', () => {
             });
             getInput(HOURS_UNIT_INPUT_ID).dispatchEvent(event);
 
-            expect(expectedTime.asMinutes()).toEqual(component.time.asMinutes());
+            expect(expectedTime.asMinutes()).toEqual((<Duration>component.time).asMinutes());
         });
 
         it('should decrement hours unit by 1', () => {
@@ -160,7 +160,7 @@ describe('NgMdTimeInputComponent', () => {
             });
             getInput(HOURS_UNIT_INPUT_ID).dispatchEvent(event);
 
-            expect(expectedTime.asMinutes()).toEqual(component.time.asMinutes());
+            expect(expectedTime.asMinutes()).toEqual((<Duration>component.time).asMinutes());
         });
 
         it('should increment the hours decimal field without impacting other fields', () => {
@@ -175,7 +175,7 @@ describe('NgMdTimeInputComponent', () => {
             });
             getInput(HOURS_DECIMAL_INPUT_ID).dispatchEvent(event);
 
-            expect(expectedTime.asMinutes()).toEqual(component.time.asMinutes());
+            expect(expectedTime.asMinutes()).toEqual((<Duration>component.time).asMinutes());
         });
 
         it('should decrement the hours decimal field without impacting other fields', () => {
@@ -190,7 +190,7 @@ describe('NgMdTimeInputComponent', () => {
             });
             getInput(HOURS_DECIMAL_INPUT_ID).dispatchEvent(event);
 
-            expect(expectedTime.asMinutes()).toEqual(component.time.asMinutes());
+            expect(expectedTime.asMinutes()).toEqual((<Duration>component.time).asMinutes());
         });
     });
 
