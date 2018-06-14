@@ -1,7 +1,3 @@
-export enum Units {
-    minutes = 'minutes'
-}
-
 export interface TimeInputAdapter<T> {
     /**
      * Creates a copy of the given object.
@@ -16,6 +12,16 @@ export interface TimeInputAdapter<T> {
      * @param minutes The number of minutes to include in the temporal object.
      */
     create(days: number, hours: number, minutes: number): T;
+
+    /**
+     * Creates a new temporal object from the given object and sets the time
+     * to the given values.
+     * @param object The temporal object used to create the new temporal object.
+     * @param days The number of days to set.
+     * @param hours The number of hours to set.
+     * @param minutes The number of minutes to set.
+     */
+    createFrom(object: T, days: number, hours: number, minutes: number): T;
 
     /**
      * Tests if the given object has the right type.
@@ -41,19 +47,18 @@ export interface TimeInputAdapter<T> {
     getHours(object: T): number;
 
     /**
+     * Returns the total number of minutes in the temporal object. This number
+     * includes the months, days and hours. Ex.  If the object has an hour,
+     * 10 minutes and 41 seconds, it will return 70.
+     * @param object The temporal object from which we get the number of minutes.
+     */
+    asMinutes(object: T): number;
+
+    /**
      * Returns the exact number of minutes in the temporal object. This number
      * is an integer. Note: It only considers the minute part of the object.
-     * Ex. If the object has an hour, 10 minutes and 60 seconds, it will return 10.
+     * Ex. If the object has an hour, 10 minutes and 41 seconds, it will return 10.
      * @param object The temporal object from which we get the number of hours.
      */
     getMinutes(object: T): number;
-
-    /**
-     * Sets the temporal object to the given time.
-     * @param object The temporal object to update.
-     * @param days The number of days to set.
-     * @param hours The number of hours to set.
-     * @param minutes The number of minutes to set.
-     */
-    setValue(object: T, days: number, hours: number, minutes: number): void;
 }

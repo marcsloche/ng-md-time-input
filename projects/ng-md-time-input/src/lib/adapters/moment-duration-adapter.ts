@@ -23,6 +23,19 @@ export class MomentDurationAdapter implements TimeInputAdapter<Duration> {
     }
 
     /**
+     * Creates a new temporal object from the given object and sets the time
+     * to the given values.
+     * @param object The temporal object used to create the new temporal object.
+     * @param days The number of days to set.
+     * @param hours The number of hours to set.
+     * @param minutes The number of minutes to set.
+     */
+    createFrom(object: Duration, days: number, hours: number, minutes: number): Duration {
+        // The duration object does not need anything from the old object.
+        return this.create(days, hours, minutes);
+    }
+
+    /**
      * Tests if the given object has the right type.
      * @param object The object to test.
      */
@@ -47,24 +60,29 @@ export class MomentDurationAdapter implements TimeInputAdapter<Duration> {
      * Ex. If the object has a day, 5 hours and 10 minutes, it will return 5.
      * @param object The temporal object from which we get the number of hours.
      */
-    getHours(object: T): number;
+    getHours(object: Duration): number {
+        return object.hours();
+    }
+
+    /**
+     * Returns the total number of minutes in the temporal object. This number
+     * includes the months, days and hours. Ex.  If the object has an hour,
+     * 10 minutes and 41 seconds, it will return 70.
+     * @param object The temporal object from which we get the number of minutes.
+     */
+    asMinutes(object: Duration): number {
+        return Math.floor(object.asMinutes());
+    }
 
     /**
      * Returns the exact number of minutes in the temporal object. This number
      * is an integer. Note: It only considers the minute part of the object.
-     * Ex. If the object has an hour, 10 minutes and 60 seconds, it will return 10.
+     * Ex. If the object has an hour, 10 minutes and 41 seconds, it will return 10.
      * @param object The temporal object from which we get the number of hours.
      */
-    getMinutes(object: T): number;
-
-    /**
-     * Sets the temporal object to the given time.
-     * @param object The temporal object to update.
-     * @param days The number of days to set.
-     * @param hours The number of hours to set.
-     * @param minutes The number of minutes to set.
-     */
-    setValue(object: T, days: number, hours: number, minutes: number): void;
+    getMinutes(object: Duration): number {
+        return object.minutes();
+    }
 
 
 }
