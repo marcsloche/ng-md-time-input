@@ -394,7 +394,6 @@ export class NgMdTimeInputComponent extends _TimeInputMixinBase
         // If the component just gain the focus, automatically focus the rightmost input.
         if (!this.focused && elementIsFocused) {
             this.focusLastInput(origin);
-            console.log("Focused with handleFocusChange");
         }
 
         // Setting up the focused state. The element is focused when we prevent the focus loss
@@ -403,7 +402,6 @@ export class NgMdTimeInputComponent extends _TimeInputMixinBase
 
         // If the component has been focused out, format the displayed time.
         if (!this.focused) {
-            console.log("Blurred with handleFocusChange");
             this.formatDislayedTime();
             if (this.ngControl) {
                 this.ngControl.control.markAsTouched();
@@ -419,14 +417,6 @@ export class NgMdTimeInputComponent extends _TimeInputMixinBase
         this._preventFocusLoss = false;
 
         this.stateChanges.next();
-    }
-
-    _onFocus() {
-        console.log("Focused with OnFocus");
-    }
-
-    _onBlur() {
-        console.log("Blurred with OnBlur");
     }
 
     /**
