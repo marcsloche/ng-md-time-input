@@ -34,6 +34,7 @@ import { Duration, duration, isDuration, Moment } from "moment";
 import { TimeFactoryService } from "./time-factory.service";
 // Time Adapters
 import { MomentDurationAdapter, TimeInputAdapter } from "./adapters";
+import { TimeFormatter } from "./formatters";
 
 @Component({
     selector: "ng-md-time-input",
@@ -118,6 +119,7 @@ export class NgMdTimeInputComponent
         private elRef: ElementRef,
         fb: FormBuilder,
         private fm: FocusMonitor,
+        private formatter: TimeFormatter,
         @Optional()
         @Self()
         public ngControl: NgControl,
@@ -193,6 +195,7 @@ export class NgMdTimeInputComponent
         this._maxTimeInMinutes = showDays
             ? this.MAX_TIME_WITH_DAYS
             : this.MAX_TIME_WITHOUT_DAYS;
+        this.formatDislayedTime();
     }
     get showDays(): boolean {
         return this._showDays;
@@ -226,9 +229,15 @@ export class NgMdTimeInputComponent
      * Sets the displayed days to the given value.
      * Note: This affectation will not change the ngModel value.
      */
-    set displayedDays(days: string) {
-        this.parts.get("daysDecimal").setValue(days.charAt(days.length - 2));
-        this.parts.get("daysUnit").setValue(days.charAt(days.length - 1));
+    set displayedDays(days: string | null) {
+        if(days) {
+            this.parts.get("daysDecimal").setValue(days.charAt(days.length - 2));
+            this.parts.get("daysUnit").setValue(days.charAt(days.length - 1));
+        }
+        else {
+            this.parts.get("daysDecimal").setValue("");
+            this.parts.get("daysUnit").setValue("");
+        }
     }
     get displayedDays(): string {
         return (
@@ -295,7 +304,9 @@ export class NgMdTimeInputComponent
 
         this.displayedMinutes = displayedTime.slice(-2); // Take only the last two characters.
         this.displayedHours = displayedTime.slice(-4, -2); // Takes from the fourth character starting from the end to the second.
-        this.displayedDays = displayedTime.slice(0, -4); // Take all characters but the last four.
+        if (this.showDays) {
+            this.displayedDays = displayedTime.slice(0, -4); // Take all characters but the last four.
+        }
     }
 
     /**
@@ -356,51 +367,15 @@ export class NgMdTimeInputComponent
      * If the time is not a duration, it will set it to an empty string.
      */
     private formatDislayedTime() {
-        if (!this.time || !isDuration(this.time)) {
-            this.displayedDays = "";
-            this.displayedHours = "";
-            this.displayedMinutes = "";
-        }
-        // Else, update the model with the written time.
-        else {
-            this.displayedDays = this.padWithChar(
-                "0",
-                Math.floor(this.time.asDays()).toString(),
-                2
-            );
-            this.displayedHours = this.padWithChar(
-                "0",
-                this.time.hours().toString(),
-                2
-            );
-            this.displayedMinutes = this.padWithChar(
-                "0",
-                this.time.minutes().toString(),
-                2
-            );
-        }
-    }
+        const formattedTime = this.formatter.formatDislayedTime(
+            this.time,
+            this.timeAdapter,
+            this.showDays
+        );
 
-    /**
-     * Pads the given value with the given char. The padding is added at the beginning of the value.
-     * @param char The char to use as padding. Its length must be of 1.
-     * @param valueToPad The string value you want to pad.
-     * @param desiredFinalLength The final desired length of the string.
-     * @returns The padded representation of the given value.
-     */
-    private padWithChar(
-        char: string,
-        valueToPad: string,
-        desiredFinalLength: number
-    ): string {
-        if (!char || char.length !== 1) {
-            throw new Error(
-                "[padWithChar] Cannot have multiple characters as padding. Only one is allowed."
-            );
-        }
-
-        const paddedString = char.repeat(desiredFinalLength) + valueToPad;
-        return paddedString.slice(desiredFinalLength * -1);
+        this.displayedDays = formattedTime.days;
+        this.displayedHours = formattedTime.hours;
+        this.displayedMinutes = formattedTime.minutes;
     }
 
     ////////////////////////////////////////////////////////////////////////////
