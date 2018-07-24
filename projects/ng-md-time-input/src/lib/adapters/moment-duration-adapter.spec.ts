@@ -4,7 +4,7 @@ import { async, ComponentFixture, TestBed, } from '@angular/core/testing';
 import { MomentDurationAdapter } from './moment-duration-adapter';
 import { duration, Duration } from 'moment';
 
-describe('NgMdTimeInputComponent', () => {
+describe('MomentDurationAdapter', () => {
 
     const adapter = new MomentDurationAdapter();
 
@@ -68,13 +68,6 @@ describe('NgMdTimeInputComponent', () => {
         const minutes = adapter.getMinutes(correctDuration);
 
         expect(minutes).toEqual(59);
-    });
-
-    it('should get the proper minutes when using the asMinutes function', () => {
-        const correctDuration = duration({hours: 2, minutes: 59});
-        const minutes = adapter.asMinutes(correctDuration);
-
-        expect(minutes).toEqual(60 * 2 + 59);
     });
 
     it('should mark the duration as invalid when it is null', () => {

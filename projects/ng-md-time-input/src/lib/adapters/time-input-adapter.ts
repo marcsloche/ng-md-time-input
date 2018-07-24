@@ -47,18 +47,19 @@ export interface TimeInputAdapter<T> {
     getHours(object: T): number;
 
     /**
-     * Returns the total number of minutes in the temporal object. This number
-     * includes the months, days and hours. Ex.  If the object has an hour,
-     * 10 minutes and 41 seconds, it will return 70.
-     * @param object The temporal object from which we get the number of minutes.
-     */
-    asMinutes(object: T): number;
-
-    /**
      * Returns the exact number of minutes in the temporal object. This number
      * is an integer. Note: It only considers the minute part of the object.
      * Ex. If the object has an hour, 10 minutes and 41 seconds, it will return 10.
      * @param object The temporal object from which we get the number of hours.
      */
     getMinutes(object: T): number;
+
+    /**
+     * Gets the maximum time for the given temporal object. This maximum time
+     * is capped to days if withDays is true, capped to hours otherwise.
+     * @param object The temporal object from which we get the maximum time.
+     * @param withDays true if the max time includes the days, false if it is
+     * capped to hours and minutes.
+     */
+    getMaxTimeInMinutes(object: T, withDays: boolean): number;
 }

@@ -1,9 +1,7 @@
 import {
     Component,
     ChangeDetectionStrategy,
-    ChangeDetectorRef,
     ElementRef,
-    forwardRef,
     HostBinding,
     Input,
     OnDestroy,
@@ -17,11 +15,8 @@ import {
     ControlValueAccessor,
     FormBuilder,
     FormGroup,
-    NG_VALUE_ACCESSOR,
     NgControl,
     Validators,
-    AbstractControl,
-    Validator,
     ValidatorFn
 } from "@angular/forms";
 import { MatFormFieldControl } from "@angular/material";
@@ -29,12 +24,12 @@ import { FocusMonitor, FocusOrigin } from "@angular/cdk/a11y";
 import { coerceBooleanProperty } from "@angular/cdk/coercion";
 import { Subject, Subscription } from "rxjs";
 // Moment
-import { Duration, duration, isDuration, Moment } from "moment";
-// Others
-import { TimeFactoryService } from "./time-factory.service";
+import { Duration, Moment } from "moment";
 // Time Adapters
 import { MomentDurationAdapter, TimeInputAdapter } from "./adapters";
 import { TimeFormatter } from "./formatters";
+// Time input model
+import { TimeInputModel } from './model/time-input.model';
 
 @Component({
     selector: "ng-md-time-input",
@@ -70,15 +65,17 @@ export class NgMdTimeInputComponent
     private _showDays = true;
     // Time management
     time: Duration | Moment | Date;
+    model = new TimeInputModel();
+    // The original time is kept to be complient with the initial value
+    // that was given to this input. Since we don't handle the years and
+    // months, we don't want to change these values when changer the time.
+    private originalTime: Duration | Moment | Date;
     private _timeAdapter: TimeInputAdapter<
         Duration | Moment | Date
     > = new MomentDurationAdapter();
-    private readonly MINUTES_UNIT_INCREMENT_STEP = 1;
-    private readonly NUMBER_OF_MINUTES_IN_TEN_MINUTES = 10;
     private readonly NUMBER_OF_MINUTES_IN_HOUR = 60;
     private readonly NUMBER_OF_MINUTES_IN_TEN_HOURS = 600;
     private readonly NUMBER_OF_MINUTES_IN_DAY = 1440;
-    private readonly NUMBER_OF_MINUTES_IN_TEN_DAYS = 14400;
     private readonly MAX_TIME_WITH_DAYS = 143999; // 99d 23:59
     private readonly MAX_TIME_WITHOUT_DAYS = 1439; // 23:59
     private _maxTimeInMinutes = this.MAX_TIME_WITH_DAYS; // 99d 23:59
@@ -115,7 +112,6 @@ export class NgMdTimeInputComponent
     propagateTouched = () => {};
 
     constructor(
-        private changeDetectorRef: ChangeDetectorRef,
         private elRef: ElementRef,
         fb: FormBuilder,
         private fm: FocusMonitor,
@@ -124,7 +120,6 @@ export class NgMdTimeInputComponent
         @Self()
         public ngControl: NgControl,
         private _renderer: Renderer2,
-        private timeFactoryService: TimeFactoryService
     ) {
         // Form initialization. On top of a directive that prevents the input of non
         // numerical char, we add a pattern to assure that only numbers are allowed.
@@ -178,9 +173,11 @@ export class NgMdTimeInputComponent
         return this.time;
     }
     set value(time: Duration | Moment | Date | null) {
-        if (time && isDuration(time)) {
-            this.time = time.clone();
+        if (time) {
+            this.originalTime = time;
+            this.  ///// USE TimeInputModel instead of directly manipulating time.
         } else {
+            this.originalTime = null;
             this.time = null;
         }
         // Sets the time to display in the proper format.
@@ -192,9 +189,7 @@ export class NgMdTimeInputComponent
 
     set showDays(showDays: boolean) {
         this._showDays = showDays;
-        this._maxTimeInMinutes = showDays
-            ? this.MAX_TIME_WITH_DAYS
-            : this.MAX_TIME_WITHOUT_DAYS;
+        this._maxTimeInMinutes = this.timeAdapter.getMaxTimeInMinutes(this.time, showDays);
         this.formatDislayedTime();
     }
     get showDays(): boolean {
@@ -208,9 +203,12 @@ export class NgMdTimeInputComponent
             throw new Error(
                 "The given TimeInputAdapter does not match the current NgModel value type."
             );
-        } else {
-            this._timeAdapter = adapter;
         }
+
+        this._timeAdapter = adapter;
+        this._maxTimeInMinutes = this.timeAdapter.getMaxTimeInMinutes(this.time, this.showDays);
+        // Sets the time to display in the proper format.
+        this.formatDislayedTime();
     }
 
     get timeAdapter(): TimeInputAdapter<Duration | Moment | Date> {
@@ -230,11 +228,12 @@ export class NgMdTimeInputComponent
      * Note: This affectation will not change the ngModel value.
      */
     set displayedDays(days: string | null) {
-        if(days) {
-            this.parts.get("daysDecimal").setValue(days.charAt(days.length - 2));
+        if (days) {
+            this.parts
+                .get("daysDecimal")
+                .setValue(days.charAt(days.length - 2));
             this.parts.get("daysUnit").setValue(days.charAt(days.length - 1));
-        }
-        else {
+        } else {
             this.parts.get("daysDecimal").setValue("");
             this.parts.get("daysUnit").setValue("");
         }
@@ -352,13 +351,45 @@ export class NgMdTimeInputComponent
             minutes;
         // If the time is greater than the max time, set it to the max time.
         if (timeInMinutes > this._maxTimeInMinutes) {
-            this.time = this.timeAdapter.create(0, 0, this._maxTimeInMinutes);
+            this.time = this.createNewTime(
+                this.originalTime,
+                0,
+                0,
+                this._maxTimeInMinutes
+            );
         }
         // Else, if the time is negative, set it to 0.
         else if (timeInMinutes < 0) {
-            this.time = this.timeAdapter.create(0, 0, 0);
+            this.time = this.createNewTime(this.originalTime, 0, 0, 0);
         } else {
-            this.time = this.timeAdapter.create(0, 0, timeInMinutes);
+            this.time = this.createNewTime(
+                this.originalTime,
+                days,
+                hours,
+                minutes
+            );
+        }
+    }
+
+    /**
+     * This is a factory method to create a new temporal object from the given value.
+     * If this value is falsy or invalid, it will create a new time from scratch.
+     */
+    private createNewTime(
+        from: Duration | Moment | Date,
+        days: number,
+        hours: number,
+        minutes: number
+    ): Duration | Moment | Date {
+        if (this.originalTime && this.timeAdapter.isValid(this.originalTime)) {
+            return this.timeAdapter.createFrom(
+                this.originalTime,
+                days,
+                hours,
+                minutes
+            );
+        } else {
+            return this.timeAdapter.create(days, hours, minutes);
         }
     }
 
@@ -426,16 +457,16 @@ export class NgMdTimeInputComponent
     handleKeydown(event: KeyboardEvent, targettedInputName: string): void {
         // On up arrow, we want to increment the targetted input
         if (event.key === "ArrowUp" || event.key === "Up") {
-            const incrementStep = this.getIncrementStep(targettedInputName);
-            this.incrementTime(incrementStep);
+            const cursorIndex = this.getCursorIndex(targettedInputName);
+            this.incrementTime(cursorIndex, false);
             event.preventDefault(); // Prevents the carret from moving to the lefthand of the input
             // event.stopPropagation(); // prevents the carret from moving
             return;
         }
         // On down arrow, we want to decrement the targetted input
         else if (event.key === "ArrowDown" || event.key === "Down") {
-            const decrementStep = this.getDecrementStep(targettedInputName);
-            this.incrementTime(decrementStep);
+            const cursorIndex = this.getCursorIndex(targettedInputName);
+            this.incrementTime(cursorIndex, true);
             event.preventDefault(); // Prevents the carret from moving to the righthand of the input
             // event.stopPropagation(); // prevents the carret from moving
             return;
@@ -473,19 +504,42 @@ export class NgMdTimeInputComponent
     }
 
     /**
-     * Increments the current time by the given amount of minutes.
-     * @param incrementStep The increment step, in minutes.
+     * Increments or decrements the time value at the given index.
+     * @param incrementIndex The index, starting from the right, to increment.
      */
-    incrementTime(incrementStep: number) {
+    incrementTime(incrementIndex: number, isDecrement: boolean) {
         if (!this.time) {
-            this.time = duration();
-        }
+            this.time = this.createNewTime(this.originalTime, 0, 0, 0);
+        } else {
+            let days = parseInt(this.displayedDays, 10);
+            let hours = parseInt(this.displayedHours, 10);
+            let minutes = parseInt(this.displayedMinutes, 10);
 
-        this.setTime(
-            this.timeAdapter.asDays(this.time),
-            this.timeAdapter.getHours(this.time),
-            this.timeAdapter.getMinutes(this.time) + incrementStep
-        );
+            switch (incrementIndex) {
+                case 0:
+                    minutes += isDecrement ? -1 : 1;
+                    break;
+                case 1:
+                    minutes += isDecrement ? -10 : 10;
+                    break;
+                case 2:
+                    hours += isDecrement ? -1 : 1;
+                    break;
+                case 3:
+                    hours += isDecrement
+                        ? this.getHoursDecimalDecrementStep()
+                        : this.getHoursDecimalIncrementStep();
+                    break;
+                case 4:
+                    days += isDecrement ? -1 : 1;
+                    break;
+                case 5:
+                    days += isDecrement ? -10 : 10;
+                    break;
+            }
+            days = this.showDays ? days : 0;
+            this.setTime(days, hours, minutes);
+        }
 
         // Once the ngModel is updated, update the displayed time.
         this.formatDislayedTime();
@@ -496,41 +550,22 @@ export class NgMdTimeInputComponent
     }
 
     /**
-     * @returns The proper increment step, based on the given input name.
+     * @returns The current cursor index (starting from the right), based on the given input name.
      */
-    private getIncrementStep(inputName: string): number {
+    private getCursorIndex(inputName: string): number {
         switch (inputName) {
             case "daysDecimal":
-                return this.NUMBER_OF_MINUTES_IN_TEN_DAYS;
+                return 5;
             case "daysUnit":
-                return this.NUMBER_OF_MINUTES_IN_DAY;
+                return 4;
             case "hoursDecimal":
-                return this.getHoursDecimalIncrementStep();
+                return 3;
             case "hoursUnit":
-                return this.NUMBER_OF_MINUTES_IN_HOUR;
+                return 2;
             case "minutesDecimal":
-                return this.NUMBER_OF_MINUTES_IN_TEN_MINUTES;
+                return 1;
             case "minutesUnit":
-                return this.MINUTES_UNIT_INCREMENT_STEP;
-        }
-    }
-    /**
-     * @returns The proper decrement step, based on the given input name.
-     */
-    private getDecrementStep(inputName: string): number {
-        switch (inputName) {
-            case "daysDecimal":
-                return -1 * this.NUMBER_OF_MINUTES_IN_TEN_DAYS;
-            case "daysUnit":
-                return -1 * this.NUMBER_OF_MINUTES_IN_DAY;
-            case "hoursDecimal":
-                return this.getHoursDecimalDecrementStep();
-            case "hoursUnit":
-                return -1 * this.NUMBER_OF_MINUTES_IN_HOUR;
-            case "minutesDecimal":
-                return -1 * this.NUMBER_OF_MINUTES_IN_TEN_MINUTES;
-            case "minutesUnit":
-                return -1 * this.MINUTES_UNIT_INCREMENT_STEP;
+                return 0;
         }
     }
 
@@ -538,7 +573,7 @@ export class NgMdTimeInputComponent
         const currentNumberOfMinutesInTime =
             this.timeAdapter.getHours(this.time) * 60 +
             this.timeAdapter.getMinutes(this.time);
-        let incrementStep = this.NUMBER_OF_MINUTES_IN_TEN_HOURS;
+        let incrementStep = 10;
 
         // The hours are on a base 24, which means that we have to adjust the increment step
         // so that the increment does not change the hours unit. (Ex: We increment the hours decimal of 0d 15:00,
@@ -548,10 +583,9 @@ export class NgMdTimeInputComponent
             this.NUMBER_OF_MINUTES_IN_DAY
         ) {
             incrementStep =
-                (24 -
-                    this.timeAdapter.getHours(this.time) +
-                    (this.timeAdapter.getHours(this.time) % 10)) *
-                this.NUMBER_OF_MINUTES_IN_HOUR;
+                24 -
+                this.timeAdapter.getHours(this.time) +
+                (this.timeAdapter.getHours(this.time) % 10);
         }
 
         return incrementStep;
@@ -561,7 +595,7 @@ export class NgMdTimeInputComponent
         const currentNumberOfMinutesInTime =
             this.timeAdapter.getHours(this.time) * 60 +
             this.timeAdapter.getMinutes(this.time);
-        let decrementStep = this.NUMBER_OF_MINUTES_IN_TEN_HOURS * -1;
+        let decrementStep = -10;
 
         // The hours are on a base 24, which means that we have to adjust the decrement step
         // so that the decrement does not change the hours unit. (Ex: We decrement the hours decimal of 1d 09:00,
@@ -572,9 +606,7 @@ export class NgMdTimeInputComponent
         ) {
             decrementStep =
                 (this.timeAdapter.getHours(this.time) +
-                    ((14 - this.timeAdapter.getHours(this.time)) % 10)) *
-                this.NUMBER_OF_MINUTES_IN_HOUR *
-                -1;
+                ((14 - this.timeAdapter.getHours(this.time)) % 10)) * -1;
         }
 
         return decrementStep;
@@ -675,7 +707,7 @@ export class NgMdTimeInputComponent
 
     // This functions tells the mat-form-field wheter it is empty or not.
     get empty() {
-        return !this.time || !isDuration(this.time);
+        return !this.time || !this.timeAdapter.isValid(this.time);
     }
 
     // Used by Angular Material to display the label properly

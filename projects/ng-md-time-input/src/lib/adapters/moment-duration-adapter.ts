@@ -3,6 +3,8 @@ import { Duration, duration, isDuration } from "moment";
 import { TimeInputAdapter } from "./time-input-adapter";
 
 export class MomentDurationAdapter implements TimeInputAdapter<Duration> {
+    private readonly NUMBER_OF_MINUTES_IN_HOUR = 60;
+    private readonly NUMBER_OF_MINUTES_IN_DAY = 1440;
 
     constructor() {
 
@@ -65,16 +67,6 @@ export class MomentDurationAdapter implements TimeInputAdapter<Duration> {
     }
 
     /**
-     * Returns the total number of minutes in the temporal object. This number
-     * includes the months, days and hours. Ex.  If the object has an hour,
-     * 10 minutes and 41 seconds, it will return 70.
-     * @param object The temporal object from which we get the number of minutes.
-     */
-    asMinutes(object: Duration): number {
-        return Math.floor(object.asMinutes());
-    }
-
-    /**
      * Returns the exact number of minutes in the temporal object. This number
      * is an integer. Note: It only considers the minute part of the object.
      * Ex. If the object has an hour, 10 minutes and 41 seconds, it will return 10.
@@ -85,4 +77,15 @@ export class MomentDurationAdapter implements TimeInputAdapter<Duration> {
     }
 
 
+    getMaxTimeInMinutes(object: Duration, withDays: boolean): number {
+        if (object && this.isValid(object)) {
+            const maxDaysInMinutes = withDays ? 99 * this.NUMBER_OF_MINUTES_IN_DAY : 0;
+            const maxHoursInMinutes = 23 * this.NUMBER_OF_MINUTES_IN_HOUR;
+            const maxMinutes = 59;
+
+            return maxDaysInMinutes + maxHoursInMinutes + maxMinutes;
+        }
+
+        return 0;
+    }
 }
