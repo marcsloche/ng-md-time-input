@@ -1,7 +1,6 @@
 import { Component } from '@angular/core';
-import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { FormGroup } from '@angular/forms';
 // Moment
-import { Moment } from "moment";
 import { utc, duration } from "moment";
 import { MomentTimeAdapter } from '../../projects/ng-md-time-input/src/public_api';
 
@@ -21,18 +20,7 @@ export class AppComponent {
     testValue = "Hi!";
     showDays = true;
 
-    constructor(private fb: FormBuilder) {
-
-        this.formGroup = fb.group({
-            timeInput: ["", Validators.required],
-            durationInput: ["", Validators.required]
-        });
-
-/*         setTimeout(() =>  {
-            this.testValue = "fdfasdd";
-            this.formGroup.disable();
-            // this.formGroup.get('timeInput').setErrors({invalid: 'invalid'});
-        }, 5000); */
+    constructor() {
     }
 
     testChange(event) {

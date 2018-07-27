@@ -52,16 +52,10 @@ describe("TimeInputModel", () => {
         expect(durationInModel).toEqual(durationObject.asMinutes());
     });
 
-    it('should throw an error if adapter is not specified and the temporal object is null', () => {
+    it('should set adapter to MomentDurationAdapter if the adapter is not specified and the temporal object is null', () => {
         const temporalObject = null;
-
-        try {
-            model.setTemporalObject(temporalObject)
-            expect(true).toBeFalsy(); // Fail test since it is not supposed to get there
-        }
-        catch(e) {
-            expect(true).toBeTruthy();
-        }
+        model.setTemporalObject(temporalObject)
+        expect(model.temporalObjectAdapter instanceof MomentDurationAdapter).toBeTruthy();
     });
 
     it(`should be null when duration updated with empty strings`, () => {

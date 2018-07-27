@@ -1,10 +1,10 @@
 <!-- this is a playground where you can test that the ng-md-time-input works properly.
      If there is code below, it is only for testing purpose. Feel free to change it as you want. -->
-<form [formGroup]="formGroup">
+<form>
     <div class="row">
         <h4>Duration input</h4>
         <mat-form-field>
-            <ng-md-time-input formControlName="durationInput" [(ngModel)]="testDuration" placeholder="Test" [showDays]="showDays" minutesSeparator=""
+            <ng-md-time-input name="durationInput" [(ngModel)]="testDuration" placeholder="Test" [showDays]="showDays" minutesSeparator=""
                 (change)="testChange($event)" (input)="testInput($event)">
 
             </ng-md-time-input>
@@ -17,8 +17,8 @@
     <div class="row">
         <h4>Moment Time input</h4>
         <mat-form-field>
-            <ng-md-time-input formControlName="timeInput" [(ngModel)]="testTime" placeholder="Test" [showDays]="showDays" minutesSeparator=""
-                [timeAdapter]="timeAdatper" (change)="testChange($event)" (input)="testInput($event)">
+            <ng-md-time-input name="timeInput" [(ngModel)]="testTime" placeholder="Test" [showDays]="showDays" minutesSeparator=""
+                 (change)="testChange($event)" (input)="testInput($event)">
 
             </ng-md-time-input>
         </mat-form-field>

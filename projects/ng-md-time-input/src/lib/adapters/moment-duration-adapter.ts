@@ -34,6 +34,10 @@ export class MomentDurationAdapter implements TimeInputAdapter<Duration> {
      */
     createFrom(object: Duration, days: number, hours: number, minutes: number): Duration {
         // The duration object does not need anything from the old object.
+        if(days === null) {
+            days = 0;
+        }
+
         return this.create(days, hours, minutes);
     }
 
@@ -86,6 +90,10 @@ export class MomentDurationAdapter implements TimeInputAdapter<Duration> {
             return maxDaysInMinutes + maxHoursInMinutes + maxMinutes;
         }
 
+        return 0;
+    }
+
+    getMinTimeInMinutes(object: Duration, stopAtDay: boolean): number {
         return 0;
     }
 }

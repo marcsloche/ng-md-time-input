@@ -32,7 +32,7 @@ export class MomentTimeAdapter implements TimeInputAdapter<Moment> {
      * Creates a new temporal object from the given object and sets the time
      * to the given values.
      * @param object The temporal object used to create the new temporal object.
-     * @param days The number of days to set. The value 0 is skipped since the first day of the month is 1.
+     * @param days The number of days to set. The value null is ignored and the date from the object is used.
      * @param hours The number of hours to set.
      * @param minutes The number of minutes to set.
      */
@@ -43,15 +43,23 @@ export class MomentTimeAdapter implements TimeInputAdapter<Moment> {
         minutes: number
     ): Moment {
         let newTime;
-        // The days cannot be set to 0 since the first day of the month is 1. Skipping it.
-        if (days <= 0) {
+
+        if (days !== null && days <= 0 && hours * 60 + minutes < this.NUMBER_OF_MINUTES_IN_DAY) {
+            days = 1;
+            hours = 0;
+            minutes = 0;
+        }
+
+        // If the days value is null, we ignore the days
+        if(days === null) {
             newTime = utc(object).set({
                 hours,
                 minutes,
                 seconds: 0,
                 millisecond: 0
             });
-        } else {
+        }
+        else {
             newTime = utc(object).set({
                 date: days,
                 hours,
@@ -60,6 +68,7 @@ export class MomentTimeAdapter implements TimeInputAdapter<Moment> {
                 millisecond: 0
             });
         }
+
 
         // Gets the month and year from the given object.
         newTime.month(object.month());
@@ -116,5 +125,14 @@ export class MomentTimeAdapter implements TimeInputAdapter<Moment> {
         }
 
         return 0;
+    }
+
+    getMinTimeInMinutes(object: Moment, stopAtDay: boolean): number {
+        if (object && this.isValid(object) && stopAtDay) {
+            // The minimum is the beginning of the month.
+            return 0;//object.date() * this.NUMBER_OF_MINUTES_IN_DAY;
+        }
+
+        return this.NUMBER_OF_MINUTES_IN_DAY; // Else setting it to the first day of the month
     }
 }
