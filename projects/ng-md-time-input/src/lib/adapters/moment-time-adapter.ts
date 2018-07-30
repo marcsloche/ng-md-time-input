@@ -116,23 +116,30 @@ export class MomentTimeAdapter implements TimeInputAdapter<Moment> {
     }
 
     getMaxTimeInMinutes(object: Moment, withDays: boolean): number {
-        if (object && this.isValid(object)) {
-            const maxDaysInMinutes = withDays ? object.daysInMonth() * this.NUMBER_OF_MINUTES_IN_DAY : 0;
-            const maxHoursInMinutes = 23 * this.NUMBER_OF_MINUTES_IN_HOUR;
-            const maxMinutes = 59;
+        const maxHoursInMinutes = 23 * this.NUMBER_OF_MINUTES_IN_HOUR;
+        const maxMinutes = 59;
+        let maxDaysInMinutes;
 
-            return maxDaysInMinutes + maxHoursInMinutes + maxMinutes;
+        if (!withDays) {
+            maxDaysInMinutes = 0;
+        }
+        else if (object && this.isValid(object)) {
+            maxDaysInMinutes = object.daysInMonth() * this.NUMBER_OF_MINUTES_IN_DAY;
+        }
+        else {
+            maxDaysInMinutes = utc().daysInMonth() * this.NUMBER_OF_MINUTES_IN_DAY;
         }
 
-        return 0;
+        return maxDaysInMinutes + maxHoursInMinutes + maxMinutes;
     }
 
-    getMinTimeInMinutes(object: Moment, stopAtDay: boolean): number {
-        if (object && this.isValid(object) && stopAtDay) {
-            // The minimum is the beginning of the month.
-            return 0;//object.date() * this.NUMBER_OF_MINUTES_IN_DAY;
+    getMinTimeInMinutes(stopAtDay: boolean): number {
+        // For dates, the min time is 0 when we are only displaying in a hour:minutes format.
+        if (stopAtDay) {
+            return 0;
         }
 
+        // If we are handling the dates with the days, the min time is 1 day since it there is no day 0 in a month.
         return this.NUMBER_OF_MINUTES_IN_DAY; // Else setting it to the first day of the month
     }
 }

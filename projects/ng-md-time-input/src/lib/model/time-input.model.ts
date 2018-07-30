@@ -329,6 +329,6 @@ export interface TemporalObjectDescriptor {
         this._maxTimeInMinutes = this._temporalObjectAdapter.getMaxTimeInMinutes(this._temporalObject, this._handleDays);
     }
     private updateMinTime(): void {
-        this._minTimeInMinutes = this._temporalObjectAdapter.getMinTimeInMinutes(this._temporalObject, !this._handleDays);
+        this._minTimeInMinutes = this._temporalObjectAdapter.getMinTimeInMinutes(!this._handleDays);
     }
  }

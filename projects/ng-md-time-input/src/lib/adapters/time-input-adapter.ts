@@ -66,9 +66,8 @@ export interface TimeInputAdapter<T> {
     /**
      * Gets the minimum time for the given temporal object. This minimum time
      * is capped to days if withDays is true, capped to hours otherwise.
-     * @param object The temporal object from which we get the minimum time.
      * @param stopAtDay true if we're not allowed to change the days, false otherwise
      * (still not allowed to change the month). This param is only useful for times, not durations.
      */
-    getMinTimeInMinutes(object: T, stopAtDay: boolean): number;
+    getMinTimeInMinutes(stopAtDay: boolean): number;
 }

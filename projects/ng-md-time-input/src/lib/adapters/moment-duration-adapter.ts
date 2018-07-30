@@ -82,18 +82,15 @@ export class MomentDurationAdapter implements TimeInputAdapter<Duration> {
 
 
     getMaxTimeInMinutes(object: Duration, withDays: boolean): number {
-        if (object && this.isValid(object)) {
-            const maxDaysInMinutes = withDays ? 99 * this.NUMBER_OF_MINUTES_IN_DAY : 0;
-            const maxHoursInMinutes = 23 * this.NUMBER_OF_MINUTES_IN_HOUR;
-            const maxMinutes = 59;
+        const maxDaysInMinutes = withDays ? 99 * this.NUMBER_OF_MINUTES_IN_DAY : 0;
+        const maxHoursInMinutes = 23 * this.NUMBER_OF_MINUTES_IN_HOUR;
+        const maxMinutes = 59;
 
-            return maxDaysInMinutes + maxHoursInMinutes + maxMinutes;
-        }
-
-        return 0;
+        return maxDaysInMinutes + maxHoursInMinutes + maxMinutes;
     }
 
-    getMinTimeInMinutes(object: Duration, stopAtDay: boolean): number {
+    getMinTimeInMinutes(stopAtDay: boolean): number {
+        // For durations, the min time is always 0 minutes.
         return 0;
     }
 }
