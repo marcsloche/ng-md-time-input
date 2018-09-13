@@ -68,8 +68,8 @@ describe('NgMdTimeInputComponent', () => {
         // Setting up the time via the NgModel entry point in the component.
         component.writeValue(currentTime);
         fixture.detectChanges();
-        const timeInComponent = component.time;
-        expect(currentTime.asMinutes()).toEqual(timeInComponent.asMinutes());
+        const timeInComponent = component.value;
+        expect(currentTime.asMinutes()).toEqual((<Duration>timeInComponent).asMinutes());
     });
 
     describe('Keyboard events', () => {
@@ -85,7 +85,7 @@ describe('NgMdTimeInputComponent', () => {
             });
             getInput(MINUTES_UNIT_INPUT_ID).dispatchEvent(event);
 
-            expect(expectedTime.asMinutes()).toEqual(component.time.asMinutes());
+            expect(expectedTime.asMinutes()).toEqual((<Duration>component.value).asMinutes());
         });
 
         it('should decrement minutes unit by 1.', () => {
@@ -100,7 +100,7 @@ describe('NgMdTimeInputComponent', () => {
             });
             getInput(MINUTES_UNIT_INPUT_ID).dispatchEvent(event);
 
-            expect(expectedTime.asMinutes()).toEqual(component.time.asMinutes());
+            expect(expectedTime.asMinutes()).toEqual((<Duration>component.value).asMinutes());
         });
 
         it('should increment minutes decimal by 1.', () => {
@@ -115,7 +115,7 @@ describe('NgMdTimeInputComponent', () => {
             });
             getInput(MINUTES_DECIMAL_INPUT_ID).dispatchEvent(event);
 
-            expect(expectedTime.asMinutes()).toEqual(component.time.asMinutes());
+            expect(expectedTime.asMinutes()).toEqual((<Duration>component.value).asMinutes());
         });
 
         it('should decrement minutes decimal by 1', () => {
@@ -130,7 +130,7 @@ describe('NgMdTimeInputComponent', () => {
             });
             getInput(MINUTES_DECIMAL_INPUT_ID).dispatchEvent(event);
 
-            expect(expectedTime.asMinutes()).toEqual(component.time.asMinutes());
+            expect(expectedTime.asMinutes()).toEqual((<Duration>component.value).asMinutes());
         });
 
         it('should increment hours unit by 1', () => {
@@ -145,7 +145,7 @@ describe('NgMdTimeInputComponent', () => {
             });
             getInput(HOURS_UNIT_INPUT_ID).dispatchEvent(event);
 
-            expect(expectedTime.asMinutes()).toEqual(component.time.asMinutes());
+            expect(expectedTime.asMinutes()).toEqual((<Duration>component.value).asMinutes());
         });
 
         it('should decrement hours unit by 1', () => {
@@ -160,7 +160,7 @@ describe('NgMdTimeInputComponent', () => {
             });
             getInput(HOURS_UNIT_INPUT_ID).dispatchEvent(event);
 
-            expect(expectedTime.asMinutes()).toEqual(component.time.asMinutes());
+            expect(expectedTime.asMinutes()).toEqual((<Duration>component.value).asMinutes());
         });
 
         it('should increment the hours decimal field without impacting other fields', () => {
@@ -175,7 +175,7 @@ describe('NgMdTimeInputComponent', () => {
             });
             getInput(HOURS_DECIMAL_INPUT_ID).dispatchEvent(event);
 
-            expect(expectedTime.asMinutes()).toEqual(component.time.asMinutes());
+            expect(expectedTime.asMinutes()).toEqual((<Duration>component.value).asMinutes());
         });
 
         it('should decrement the hours decimal field without impacting other fields', () => {
@@ -190,7 +190,7 @@ describe('NgMdTimeInputComponent', () => {
             });
             getInput(HOURS_DECIMAL_INPUT_ID).dispatchEvent(event);
 
-            expect(expectedTime.asMinutes()).toEqual(component.time.asMinutes());
+            expect(expectedTime.asMinutes()).toEqual((<Duration>component.value).asMinutes());
         });
     });
 
@@ -210,31 +210,28 @@ describe('NgMdTimeInputComponent', () => {
 
     describe("Control state management", () => {
         it("should be empty by default", () => {
-            expect(component.time).toBeFalsy();
+            expect(component.value).toBeFalsy();
         });
 
         it("should be valid when empty and not required", () => {
             expect(component.errorState).toBeFalsy();
         });
 
-        /* These tests are commented since I am not able to bind ngModel to test component.
-
         it("should be invalid when empty and required", () => {
             component.required = true;
-            component.time = null;
+            component.value = null;
             fixture.detectChanges();
 
-            expect(component.ngControl.control.errors.required).toBeTruthy();
+            expect(component.errorState).toBeTruthy();
         });
 
         it("should be set to invalid when its content is invalid", () => {
             // After getting the rightmost input, we need to trigger a click on the component.
             component.parts.get(MINUTES_UNIT_INPUT_NAME).setErrors({ invalid: 'invalid' });
-            component.propagateTouched();
             fixture.detectChanges();
 
-            expect(component.ngControl.control.errors.invalid).toBeTruthy();
-        }); */
+            expect(component.errorState).toBeTruthy();
+        });
 
         it("should be not be editable when it is disabled", () => {
             component.disabled = true;
